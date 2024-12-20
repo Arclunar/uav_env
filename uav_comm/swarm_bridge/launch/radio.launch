@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+
+    <node name="telemetry_air2ground" pkg="swarm_bridge" type="telemetry_air2ground" output="screen">
+        <param name="drone_id" value="0" />
+        <param name="serial_port" value="/dev/ttyUSB0" />
+        <remap from="~all_odom" to="/others_odom" />
+    </node>
+
+</launch>

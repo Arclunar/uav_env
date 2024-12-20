@@ -1,0 +1,7 @@
+<launch>
+    <node name="mocap_to_enu" pkg="ekf" type="mocap_to_enu" output="screen">
+        <remap from="~vrpn_pose" to="/vrpn_client_node/$(arg markname)/pose" />
+        <remap from="~enu_pose" to="/mavros/vision_pose/pose" />
+        <param name="yaw_offset" type="double" value="-70.0" />
+    </node>
+</launch>

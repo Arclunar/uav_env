@@ -1,0 +1,54 @@
+<launch>
+    <include file="$(find ekf)/launch/sample.launch">
+        <arg name="server" value="10.1.1.198" />
+    </include>
+
+    <arg name="odom_raw" value="/ekf/ekf_odom" />
+    <arg name="pose_raw" value="/vrpn_client_node/coax04/pose"/>
+
+    <param name="range_sensor_offset" type="double" value="0.00"/>
+
+    <node name="micolink_tof_node" pkg="micolink" type="micolink_node" output="screen">
+        <param name="port_name" type="str" value="/dev/ttyTHS1"/>
+    </node>
+    <node name="height_fusion" pkg="merge_height" type="height_fusion_mocap" output="screen">
+        <remap from="~odom_raw" to="null" />
+        <remap from="~odom_fusion" to="/height_merge_odom" />
+        <remap from="~tof_measure" to="/micolink_tof" />
+        <remap from="~pose_raw" to="$(arg pose_raw)"/>
+    </node>
+    
+    <node pkg="ekf" type="ekf" name="ekf" output="screen">
+        <remap from="~imu" to="/mavros/imu/data_raw" />
+        <!-- <remap from="~bodyodometry" to="/Odometry"/>  -->
+        <remap from="~bodyodometry" to="/pose_height_fusion" />
+        <remap from="~ekf_odom" to="/ekf/ekf_odom" />
+        <remap from="~yaw_rad" to="/yaw_radius" />
+        
+        <!-- parms -->
+        <rosparam file="$(find ekf)/launch/PX4_vio_drone.yaml" command="load" />
+
+        <!--body
+        in IMU frame-->
+        <param name="imu_trans_x" type="double" value="0.0" />
+        <param name="imu_trans_y" type="double" value="0.0" />
+        <!-- <param name="imu_trans_z" type="double" value="-0.10"/>  -->
+        <param name="imu_trans_z" type="double" value="0.0" />
+
+        <!-- Qt -->
+        <param name="gyro_cov" type="double" value="0.02" />
+        <param name="acc_cov" type="double" value="0.5" />
+        <!-- Rt -->
+        <!-- <param name="position_cov" type="double" value="0.01"/>
+        <param name="q_rp_cov" type="double" value="0.01"/>
+        <param name="q_yaw_cov" type="double" value="0.01"/>   -->
+        <param name="position_cov" type="double" value="0.00001" />
+        <param name="q_rp_cov" type="double" value="0.00001" />
+        <param name="q_yaw_cov" type="double" value="0.00001" />
+    </node>
+
+
+    <node pkg="topic_tools" type="relay" name="odom_to_fcu" args="/vrpn_client_node/coax06/pose /mavros/vision_pose/pose" />
+
+
+</launch>

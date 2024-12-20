@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="odom_raw" />
+    <arg name="odom_fusion" value="/odom_fusion" />
+    <arg name="tof_measure" value="/nlink_tofsense_frame0" />
+
+
+    <node name="height_fusion" pkg="merge_height" type="height_fusion" output="screen">
+        <remap from="~odom_raw" to="$(arg odom_raw)" />
+        <remap from="~odom_fusion" to="$(arg odom_fusion)" />
+        <remap from="~tof_measure" to="$(arg tof_measure)" />
+    </node>
+    
+
+</launch>

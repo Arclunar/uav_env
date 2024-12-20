@@ -1,0 +1,34 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/nv1/713workspace/formation_fly/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/nv1/713workspace/formation_fly/src/planner/plan_manage/include/**",
+        "/home/nv1/713workspace/formation_fly/src/ekf/include/**",
+        "/home/nv1/713workspace/formation_fly/src/uav_simulator/mockamap/include/**",
+        "/home/nv1/713workspace/formation_fly/src/planner/path_searching/include/**",
+        "/home/nv1/713workspace/formation_fly/src/planner/plan_env/include/**",
+        "/home/nv1/713workspace/formation_fly/src/Utils/pose_utils/include/**",
+        "/home/nv1/713workspace/formation_fly/src/Utils/quadrotor_msgs/include/**",
+        "/home/nv1/713workspace/formation_fly/src/uav_simulator/so3_control/include/**",
+        "/home/nv1/713workspace/formation_fly/src/uav_simulator/so3_quadrotor_simulator/include/**",
+        "/home/nv1/713workspace/formation_fly/src/swarm_bridge/include/**",
+        "/home/nv1/713workspace/formation_fly/src/planner/traj_opt/include/**",
+        "/home/nv1/713workspace/formation_fly/src/planner/traj_utils/include/**",
+        "/home/nv1/713workspace/formation_fly/src/Utils/uav_utils/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-arm64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

@@ -1,0 +1,12 @@
+    Header header    
+    int32  time_ms
+    int32  distance
+    int8   strength
+    int8   precision
+    int8   tof_status
+    int8  reserved1
+    int16   flow_vel_x
+    int16   flow_vel_y
+    int8   flow_quality
+    int8   flow_status
+    int16  reserved2

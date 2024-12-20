@@ -1,0 +1,42 @@
+<launch>
+
+  <arg name="drone_id" default="1" />
+  <arg name="ground_station_ip" default="192.168.101.100" />
+  <arg name="drone_num" default="3" />
+  <arg name="odom_to_broadcast" default="/ekf/ekf_odom" />
+  <arg name="drone_0_ip" default="192.168.101.0" />
+  <arg name="drone_1_ip" default="192.168.101.0" />
+  <arg name="drone_2_ip" default="192.168.101.0" />
+  <arg name="drone_3_ip" default="192.168.101.0" />
+  <arg name="drone_4_ip" default="192.168.101.0" />
+  <arg name="drone_5_ip" default="192.168.101.0" />
+  <node pkg="swarm_bridge" name="drone_$(arg drone_id)_bridge_node_tcp" type="bridge_node_tcp"
+    output="screen" respawn="true">
+
+    <remap from="~my_odom" to="$(arg odom_to_broadcast)" />
+    <remap from="/goal_brig2plner" to="/goal_with_id" />
+    <remap from="/takeoffLand_bridge2planner" to="/px4ctrl/takeoff_land" />
+
+    <param name="self_id" value="$(arg drone_id)" />
+    <param name="is_ground_station" value="false" />
+    <param name="odom_max_freq" value="10" />
+    <param name="drone_num" value="$(arg drone_num)" />
+    <param name="drone_ip_0" value="$(arg drone_0_ip)" type="string" />
+    <param name="drone_ip_1" value="$(arg drone_1_ip)" type="string" />
+    <param name="drone_ip_2" value="$(arg drone_2_ip)" type="string" />
+    <param name="drone_ip_3" value="$(arg drone_3_ip)" type="string" />
+    <param name="drone_ip_4" value="$(arg drone_4_ip)" type="string" />
+    <param name="drone_ip_5" value="$(arg drone_5_ip)" type="string" />
+
+    <param name="ground_station_num" value="1" />
+    <param name="ground_station_ip_0" value="$(arg ground_station_ip)" type="string" />
+
+  </node>
+
+  <!-- <node pkg="swarm_bridge" name="traj2odom_node" type="traj2odom_node" output="screen">
+
+    <param name="odom_hz" value="30" />
+
+  </node> -->
+
+</launch>

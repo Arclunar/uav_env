@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="drone_id" default="0" />
+    <arg name="drone_num" value="6" />
+    <arg name="odom_to_broadcast" default="/ekf/ekf_odom_corrected" />
+    <arg name="serial_port" value="/dev/ttyUSB0" />
+    <arg name="uwb_port" default="/dev/ttyTHS0"/>
+
+    <!-- uwb commnunication -->
+    <include file="$(find swarm_bridge)/launch/all_bridge.launch">
+        <arg name="drone_id" default="$(arg drone_id)" />
+        <arg name="serial_port" value="$(arg serial_port)" />
+        <arg name="uwb_port" value="$(arg uwb_port)" />
+        <arg name="odom_to_broadcast" value="$(arg odom_to_broadcast)" />
+        <arg name="drone_num" default="$(arg drone_num)" />
+    </include>
+
+    <!-- don't need odom bias and  odom correction -->
+    <node pkg="topic_tools" type="relay" name="odom_relay" args="/ekf/ekf_odom ekf/ekf_odom_corrected" />
+
+</launch>

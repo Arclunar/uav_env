@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="swarm_bridge" type="bridge_node_uwb" name="bridge_node_uwb" output="screen"/>
+</launch>

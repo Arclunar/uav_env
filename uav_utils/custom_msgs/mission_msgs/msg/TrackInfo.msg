@@ -1,0 +1,6 @@
+int16 drone_id
+time timestamp
+nav_msgs/Odometry object_odom
+bool flag_set_hold_yaw
+bool flag_unset_hold_yaw
+float32 hold_yaw

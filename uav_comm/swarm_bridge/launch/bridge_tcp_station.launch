@@ -1,0 +1,44 @@
+<launch>
+
+  <arg name="station_id" default="0" />
+  <arg name="ground_station_ip" default="192.168.31.201" />
+  <arg name="drone_num"/>
+  <arg name="drone_ip_0"/>
+  <arg name="drone_ip_1"/>
+  <arg name="drone_ip_2"/>
+  <arg name="drone_ip_3"/>
+  <arg name="drone_ip_4"/>
+  <arg name="drone_ip_5"/>
+  <arg name="drone_ip_6"/>
+  <arg name="drone_ip_7"/>
+  <arg name="drone_ip_8"/>
+  <arg name="drone_ip_9"/>
+  
+  <node pkg="swarm_bridge" name="station_$(arg station_id)_bridge_node_tcp" type="bridge_node_tcp"
+    output="screen">
+
+    <param name="self_id" value="$(arg station_id)" />
+    <param name="is_ground_station" value="true" />
+    <param name="drone_num" value="1" />
+    <param name="drone_ip_0" value="$(arg drone_ip_0)" type="string" />
+    <param name="drone_ip_1" value="$(arg drone_ip_1)" type="string" />
+    <param name="drone_ip_2" value="$(arg drone_ip_2)" type="string" />
+    <param name="drone_ip_3" value="$(arg drone_ip_3)" type="string" />
+    <param name="drone_ip_4" value="$(arg drone_ip_4)" type="string" />
+    <param name="drone_ip_5" value="$(arg drone_ip_5)" type="string" />
+    <param name="drone_ip_6" value="$(arg drone_ip_6)" type="string" />
+    <param name="drone_ip_7" value="$(arg drone_ip_7)" type="string" />
+    <param name="drone_ip_8" value="$(arg drone_ip_8)" type="string" />
+    <param name="drone_ip_9" value="$(arg drone_ip_9)" type="string" />
+
+    <param name="ground_station_num" value="1" />
+    <param name="ground_station_ip_0" value="$(arg ground_station_ip)" type="string" />
+  </node>
+
+  <node pkg="swarm_bridge" name="traj2odom_node" type="traj2odom_node" output="screen">
+
+    <param name="odom_hz" value="30" />
+
+  </node>
+
+</launch>

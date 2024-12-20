@@ -1,0 +1,3 @@
+uint8 drone_id
+float64 latitude
+float64 longitude

@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="ekf_odom" default="/ekf/ekf_odom"/>
+    <arg name="node_name" default="ekf"/>
+    <arg name="tof_measure" default="/micolink_tof" />
+    <arg name="odom_raw" value="/mavros/local_position/odom" />
+    <arg name="tof_port" value="/dev/ttyTHS1"/>
+    <arg name="tof_is_micolink" default="false"/>
+    <arg name="tof_is_nlink" default="false"/>
+    <arg name="tof_is_px4" default="false"/>
+    <arg name="markname" default="coax01"/>
+
+    <include file="$(find ekf)/launch/sample.launch">
+        <arg name="server" value="10.1.1.198" />
+    </include>
+
+    <node name="mocap_to_enu" pkg="ekf" type="mocap_to_enu" output="screen">
+        <remap from="~vrpn_pose" to="/vrpn_client_node/$(arg markname)/pose" />
+        <remap from="~enu_pose" to="/mavros/vision_pose/pose" />
+        <param name="yaw_offset" type="double" value="-83.0" />
+    </node>
+
+    <node pkg="ekf" type="ekf" name="$(arg node_name)" output="screen">
+        <remap from="~imu" to="/mavros/imu/data_raw" />
+        <!-- <remap from="~bodyodometry" to="/Odometry"/>  -->
+        <remap from="~bodyodometry" to="/pose_height_fusion" />
+        <remap from="~ekf_odom" to="$(arg ekf_odom)" />
+        <remap from="~yaw_rad" to="/yaw_radius" />
+
+        <!-- parms -->
+        <rosparam file="$(find ekf)/launch/PX4_vio_drone.yaml" command="load" />
+
+        <!--body
+        in IMU frame-->
+        <param name="imu_trans_x" type="double" value="0.0" />
+        <param name="imu_trans_y" type="double" value="0.0" />
+        <!-- <param name="imu_trans_z" type="double" value="-0.10"/>  -->
+        <param name="imu_trans_z" type="double" value="0.0" />
+
+        <!-- Qt -->
+        <param name="gyro_cov" type="double" value="0.02" />
+        <param name="acc_cov" type="double" value="0.5" />
+        <!-- Rt -->
+        <param name="position_cov" type="double" value="0.01"/>
+        <param name="q_rp_cov" type="double" value="0.01"/>
+        <param name="q_yaw_cov" type="double" value="0.01"/>
+        <!-- <param name="position_cov" type="double" value="0.00001" />
+        <param name="q_rp_cov" type="double" value="0.00001" />
+        <param name="q_yaw_cov" type="double" value="0.00001" /> -->
+    </node>
+
+
+    <group if="$(arg tof_is_nlink)">
+        <node pkg="nlink_parser" type="tofsense" name="tofsense0" output="screen">
+            <param name="port_name" type="str" value="/dev/ttyTHS1" />
+            <param name="baud_rate" type="int" value="921600" />
+            <param name="inquire_mode" type="bool" value="false" />
+        </node>
+        <node name="height_fusion" pkg="merge_height" type="height_fusion" output="screen">
+            <remap from="~odom_raw" to="$(arg odom_raw)" />
+            <remap from="~odom_fusion" to="/odom_fusion" />
+            <remap from="~tof_measure" to="$(arg tof_measure)" />
+        </node>
+    </group>
+
+    <group if="$(arg tof_is_micolink)">
+        <node name="micolink_tof_node" pkg="micolink" type="micolink_node" output="screen">
+            <param name="port_name" type="str" value="/dev/ttyTHS1"/>
+        </node>
+        <node name="height_fusion" pkg="merge_height" type="height_fusion" output="screen">
+            <remap from="~odom_raw" to="$(arg odom_raw)" />
+            <remap from="~odom_fusion" to="/odom_fusion" />
+            <remap from="~tof_measure" to="/micolink_tof" />
+        </node>
+    </group>
+
+    <group if="$(arg tof_is_px4)">
+        <node name="height_fusion" pkg="merge_height" type="height_fusion" output="screen">
+            <remap from="~odom_raw" to="$(arg odom_raw)" />
+            <remap from="~odom_fusion" to="/odom_fusion" />
+            <remap from="~tof_measure" to="/mavros/px4flow/ground_distance" />
+        </node>
+    </group>
+
+
+    <!-- <node pkg="topic_tools" type="relay" name="odom_to_fcu" args="/vrpn_client_node/$(arg markname)/pose /mavros/vision_pose/pose" /> -->
+
+    <node name="echo_state" pkg="ekf" type="echo_state" output="screen"/>
+
+</launch>

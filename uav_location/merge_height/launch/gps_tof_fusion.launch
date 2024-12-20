@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="odom_raw" value="/mavros/global_position/local" />
+    <arg name="odom_fusion" value="/odom_fusion" />
+    <!-- <arg name="vio_height_odom" value="/vins_fusion/imu_propagate" /> -->
+    <arg name="tof_measure" value="/micolink_tof" />
+
+    <!-- <node name="vio_fake" pkg="merge_height" type="vio_fake" output="screen">
+        <remap from="~height_odom" to="$(arg vio_height_odom)" />
+        <remap from="~fake_height" to="$(arg height_estimate)" />
+    </node> -->
+
+    <node name="height_fusion" pkg="merge_height" type="height_fusion" output="screen">
+        <remap from="~odom_raw" to="$(arg odom_raw)" />
+        <remap from="~odom_fusion" to="$(arg odom_fusion)" />
+        <remap from="~tof_measure" to="$(arg tof_measure)" />
+    </node>
+    
+
+</launch>

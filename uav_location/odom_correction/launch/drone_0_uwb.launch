@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+    <!--sudo chmod 777 .....  -->
+    <arg name="drone_id" value="0"/>
+    <arg name="broadcast_ip" default="192.168.101.255"/>
+    <include file="$(find odom_correction)/launch/uwb_correction.launch">
+        <arg name="drone_id" value="$(arg drone_id)"/>
+        <arg name="odom_topic" value="vins_fusion/imu_propagate"/>
+        <arg name="uwb_topic" value="/nlink_linktrack_nodeframe3"/>
+    </include>
+    <include file="$(find nlink_parser)/launch/linktrack.launch"/>
+    <include file="$(find swarm_bridge)/launch/bridge_udp.launch">
+        <arg name="drone_id" value="$(arg drone_id)"/>
+        <arg name="broadcast_ip" value="$(arg broadcast_ip)"/>
+    </include>
+    
+    
+</launch>

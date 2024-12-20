@@ -1,0 +1,5 @@
+<launch>
+  <arg name="drone_id" default="0" />
+  <arg name="odom_topic" default="/vins_fusion/imu_propagate" />
+  <arg name="uwb_topic" default="/nlink_linktrack_nodeframe3" />
+  <arg name="corrected_odom_topic" default="/odom_correction/odom" />
