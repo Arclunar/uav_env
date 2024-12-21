@@ -2,6 +2,7 @@
 <launch>
     <arg name="drone_id" default="0" />
     <arg name="drone_num" value="6" />
+    <arg name="odom_origin" default="/ekf/ekf_odom"/>
     <arg name="odom_add_bias" default="/odom_add_bias" />
     <arg name="odom_to_broadcast" default="/ekf/ekf_odom_corrected" />
     <arg name="serial_port" value="/dev/ttyUSB0" />
@@ -26,7 +27,9 @@
     <!-- make local frame consistency for multi drones  /ekf/ekf_odom -> /odom_add_bias-->
     <node name="convert_odom" pkg="ego_planner" type="convert_odom.py" output="screen">
         <param name="drone_id" value="$(arg drone_id)"/>
-        <rosparam command="load" file="$(find ego_planner)/launch/formation_param.yaml"/>
+        <rosparam command="load" file="$(find ego_planner)/launch/swarm_param.yaml"/>
+        <remap from="odom_in" to="#(arg odom_origin)"/>
+        <remap from="odom_out" to="$(arg odom_add_bias)"/>
     </node>
 
 </launch>
