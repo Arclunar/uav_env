@@ -100,6 +100,8 @@ int main(int argc, char *argv[])
     fsm.rosbag_record_pub = nh.advertise<std_msgs::Bool>("/rosbag_control",1);
     fsm.ctrl_FCU_pos_pub = nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local",10);
 
+    fsm.trigger_formation_trans_pub = nh.advertise<std_msgs::Int8>("/formation_trans_trigger",5);
+
     ros::Duration(0.5).sleep();
 
     if (param.takeoff_land.no_RC)

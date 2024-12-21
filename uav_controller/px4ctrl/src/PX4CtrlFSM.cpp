@@ -68,6 +68,19 @@ void PX4CtrlFSM::process()
 		ROS_INFO_STREAM("[px4ctrl] PX4 : "<<state_data.current_state.mode);
 	}
 
+	// toggle reboot_fcu switch (no more switch to use) to trigger formation transition
+	if(rc_data.toggle_reboot)
+	{
+		static int last_trigger_formation = 0;
+		int trigger_formation = (last_trigger_formation + 1) % 5;
+		if(trigger_formation == 0)
+			trigger_formation = 1;
+		std_msgs::Int8 trigger_msg;
+		trigger_msg.data = trigger_formation;
+		trigger_formation_trans_pub.publish(trigger_msg);
+		last_trigger_formation = trigger_formation;
+	}
+
 	// STEP1: state machine runs
 	px4ctrl::fsm_debug fsm_msg;
 	fsm_msg.state = state;

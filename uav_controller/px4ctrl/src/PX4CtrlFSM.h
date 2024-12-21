@@ -14,6 +14,7 @@
 #include <px4ctrl/des_debug.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/Empty.h>
+#include <std_msgs/Int8.h>
 
 
 #include "input.h"
@@ -55,6 +56,7 @@ public:
 	ros::Publisher set_fix_yaw_cmd_pub_;
 	ros::Publisher mandatory_stop_pub;  // for emergency stop trajectory
 	ros::Publisher cancel_mandatory_stop_pub;
+	ros::Publisher trigger_formation_trans_pub;
 	ros::ServiceClient set_FCU_mode_srv;
 	ros::ServiceClient arming_client_srv;
 	ros::ServiceClient reboot_FCU_srv;
