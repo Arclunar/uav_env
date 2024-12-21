@@ -54,6 +54,7 @@ public:
 	ros::Publisher ctrl_FCU_pos_pub;
 	ros::Publisher set_fix_yaw_cmd_pub_;
 	ros::Publisher mandatory_stop_pub;  // for emergency stop trajectory
+	ros::Publisher cancel_mandatory_stop_pub;
 	ros::ServiceClient set_FCU_mode_srv;
 	ros::ServiceClient arming_client_srv;
 	ros::ServiceClient reboot_FCU_srv;

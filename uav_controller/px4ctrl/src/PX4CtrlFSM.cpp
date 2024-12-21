@@ -205,6 +205,11 @@ void PX4CtrlFSM::process()
 			ROS_INFO("\033[32m[px4ctrl] RC CMD : AUTO_HOVER(L2) --> AUTO_LAND\033[32m");
 			break;
 		}
+		if(rc_data.enter_command_mode)
+		{
+			std_msgs::Empty cancel_mandatory_stop_msg;
+			cancel_mandatory_stop_pub.publish(cancel_mandatory_stop_msg);
+		}
 		if (!rc_data.is_hover_mode || !odom_is_received(now_time))
 		{
 			state = MANUAL_CTRL;

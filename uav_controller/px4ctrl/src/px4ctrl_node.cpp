@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
     fsm.des_debug_pub = nh.advertise<px4ctrl::des_debug>("/px4ctrl/des_debug",100);
     fsm.set_fix_yaw_cmd_pub_ = nh.advertise<std_msgs::Float64>("/set_fix_yaw_cmd", 10);
     fsm.mandatory_stop_pub = nh.advertise<std_msgs::Empty>("/mandatory_stop", 10);
+    fsm.cancel_mandatory_stop_pub = nh.advertise<std_msgs::Empty>("/cancel_mandatory_stop", 10);
     fsm.set_FCU_mode_srv = nh.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
     fsm.arming_client_srv = nh.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
 
