@@ -16,6 +16,7 @@ RC_Data_t::RC_Data_t()
     toggle_land = false;
     exit_takeoff = false;
     exit_land = false;
+    toggle_formation_transition = false;
 
     for (int i = 0; i < 4; ++i)
     {
@@ -152,6 +153,12 @@ void RC_Data_t::feed(mavros_msgs::RCInConstPtr pMsg)
         if((rcv_stamp-enter_command_time).toSec() > 1.0)
             enter_command_mode = false;
     }
+
+
+    if(last_reboot_cmd < REBOOT_THRESHOLD_VALUE && reboot_cmd > REBOOT_THRESHOLD_VALUE)
+        toggle_formation_transition = true;
+    else
+        toggle_formation_transition = false;
 
     // 3
     if (!is_hover_mode && !is_command_mode)

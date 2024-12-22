@@ -69,7 +69,7 @@ void PX4CtrlFSM::process()
 	}
 
 	// toggle reboot_fcu switch (no more switch to use) to trigger formation transition
-	if(rc_data.toggle_reboot)
+	if(rc_data.toggle_formation_transition)
 	{
 		static int last_trigger_formation = 0;
 		int trigger_formation = (last_trigger_formation + 1) % 5;
@@ -600,6 +600,7 @@ void PX4CtrlFSM::process()
 	rc_data.enter_hover_mode = false;
 	rc_data.enter_command_mode = false;
 	rc_data.toggle_reboot = false;
+	rc_data.toggle_formation_transition = false;
 	takeoff_land_data.triggered = false;
 }
 

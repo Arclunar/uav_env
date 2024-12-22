@@ -50,6 +50,7 @@ public:
   bool is_hover_mode;
   bool enter_hover_mode;
   bool toggle_reboot;
+  bool toggle_formation_transition;
 
   static constexpr double GEAR_SHIFT_VALUE = 0.75;
   static constexpr double API_MODE_THRESHOLD_VALUE = 0.75;
