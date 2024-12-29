@@ -28,8 +28,8 @@
     <node name="convert_odom" pkg="ego_planner" type="convert_odom.py" output="screen">
         <param name="drone_id" value="$(arg drone_id)"/>
         <rosparam command="load" file="$(find ego_planner)/launch/swarm_param.yaml"/>
-        <remap from="odom_in" to="#(arg odom_origin)"/>
+        <remap from="odom_in" to="$(arg odom_origin)"/>
         <remap from="odom_out" to="$(arg odom_add_bias)"/>
     </node>
-
+odom_in
 </launch>
