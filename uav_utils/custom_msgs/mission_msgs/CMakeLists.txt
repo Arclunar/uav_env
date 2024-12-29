@@ -19,6 +19,7 @@ add_message_files(
   FILES
   Task.msg
   TrackInfo.msg
+  TargetObservation.msg
 )
 generate_messages(
   DEPENDENCIES

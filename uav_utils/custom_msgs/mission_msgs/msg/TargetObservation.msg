@@ -1,0 +1,3 @@
+int16 drone_id
+time view_time
+nav_msgs/Odometry target_ekf_odom
