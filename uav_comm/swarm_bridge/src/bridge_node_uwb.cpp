@@ -36,7 +36,7 @@ enum MESSAGE_TYPE {
     ODOM_ORIGIN,  // UWB修正前的里程计数据，不走数传，直接用uwb和地面站通信
     POLY_TRAJ,    // 多项式轨迹，地面站接收轨迹可视化用
     GPS_ORIGIN,  // 经度和维度，地面站发给飞机的，将这个经纬度设置为坐标原点
-    TRIG,
+    TRIG,        // Trigger 触发
     STOP,       // Mandotory stop 强制悬停
     MS,       // Mission 任务切换
     OB_OV,     // Object Observation 发送的飞机ID、被跟踪物体的ID、被跟踪物体odom
@@ -155,10 +155,26 @@ void uwb_receiver_cb(const nlink_parser::LinktrackNodeframe0::ConstPtr &msg) {
                     takeoff_pub.publish(takeoff_land_cmd_local);
                 }
                 if (takeoff_land_cmd_from_bridge.takeoff_land_cmd == 1) {
-                    ROS_INFO("TAKEOFF_CMD FOR DRONE %d RECEIVED", takeoff_land_cmd_from_bridge.drone_id);
-
+                    if(takeoff_land_cmd_from_bridge.drone_id == 255){
+                        ROS_INFO("TAKEOFF_CMD FOR ALL DRONES RECEIVED");
+                    }
+                    else if(takeoff_land_cmd_from_bridge.drone_id == self_id_){
+                        ROS_INFO("TAKEOFF_CMD FOR ME RECEIVED");
+                    }
+                    else{
+                        ROS_INFO("TAKEOFF_CMD FOR DRONE %d RECEIVED", takeoff_land_cmd_from_bridge.drone_id);
+                    }
                 } else if (takeoff_land_cmd_from_bridge.takeoff_land_cmd == 2) {
-                    ROS_INFO("LAND_CMD FOR DRONE %d RECEIVED", takeoff_land_cmd_from_bridge.drone_id);
+                    if(takeoff_land_cmd_from_bridge.drone_id == 255){
+                        ROS_INFO("LAND_CMD FOR ALL DRONES RECEIVED");
+                    }
+                    else if(takeoff_land_cmd_from_bridge.drone_id == self_id_){
+                        ROS_INFO("LAND_CMD FOR ME RECEIVED");
+                    }
+                    else{
+                        ROS_INFO("LAND_CMD FOR DRONE %d RECEIVED", takeoff_land_cmd_from_bridge.drone_id);
+                    }
+                    
                 }
                 else{
                     ROS_ERROR("Unknown takeoff_land_cmd");
@@ -226,10 +242,10 @@ void uwb_receiver_cb(const nlink_parser::LinktrackNodeframe0::ConstPtr &msg) {
             case MESSAGE_TYPE::STOP:{
                 std_msgs::Empty empty_msg;
                 mandatory_stop_pub_.publish(empty_msg);
-                static ros::Time last_send_mandatory_stop;
-                if ((ros::Time::now() - last_send_mandatory_stop).toSec() > 0.5) {
+                static ros::Time last_send_stop;
+                if ((ros::Time::now() - last_send_stop).toSec() > 0.5) {
                     uwbSend(MESSAGE_TYPE::STOP, empty_msg);
-                    last_send_mandatory_stop = ros::Time::now();
+                    last_send_stop = ros::Time::now();
                 }
                 break;
             }
@@ -250,12 +266,13 @@ void uwb_receiver_cb(const nlink_parser::LinktrackNodeframe0::ConstPtr &msg) {
                 mission_msgs::TrackTargetState track_target_state;
                 deserializeTopic(track_target_state);
                 tracktargetstate_pub_.publish(track_target_state);
+                break;
             }
             case MESSAGE_TYPE::OB_OV: {
                 mission_msgs::ObjectObservation object_observation;
                 deserializeTopic(object_observation);
                 other_object_observation_pub_.publish(object_observation);
-                // send
+                // Forward to other drones
                 // static ros::Time last_send_object_observation;
                 // if ((ros::Time::now() - last_send_object_observation).toSec() > 0.2) {
                 //     uwbSend(MESSAGE_TYPE::TR_OV, object_observation);
