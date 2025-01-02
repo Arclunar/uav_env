@@ -16,8 +16,9 @@
 #include "swarm_bridge/gps.h"
 #include "traj_utils/PolyTraj.h"
 #include <geometry_msgs/PoseStamped.h>
-#include <mission_msgs/Task.h>
-#include <mission_msgs/TrackInfo.h>
+#include <mission_msgs/Mission.h>
+#include <mission_msgs/ObjectObservation.h>
+#include <mission_msgs/TrackTargetState.h>
 
 /*
     每个数据帧不得超过0.1KB，一个原生的odom是0.7kb，所以需要适当压缩
@@ -37,15 +38,19 @@ enum MESSAGE_TYPE {
     GPS_ORIGIN,  // 经度和维度，地面站发给飞机的，将这个经纬度设置为坐标原点
     TRIG,
     STOP,       // Mandotory stop 强制悬停
-    T_C,       // Task Change 任务切换
-    TR_IF,     // Track info 发送的飞机ID、被跟踪物体的位姿、是否hold_formation_、hold_formation_q_
-} massage_type_;
+    MS,       // Mission 任务切换
+    OB_OV,     // Object Observation 发送的飞机ID、被跟踪物体的ID、被跟踪物体odom
+    TR_ST      // Track Target State 跟踪是否ready
+};
 #define BUF_LEN 1048576  // 1MB, 实测只能发0.1KB
 std::mutex send_mtx, rec_mtx, drone_state_mtx;
 char uwb_recv_buf_[BUF_LEN], uwb_send_buf_[BUF_LEN];
 ros::Publisher uwb_pub, other_odoms_pub_, minco_traj_pub_, takeoff_bridge_pub,
-    takeoff_pub, polytraj_pub, goal_pub_, gps_origin_pub, minco_debug_pub_, other_track_info_pub_,
-    miniminco_debug_pub_, takeoff_land_from_bridge_pub_, trigger_pub_ , mandatory_stop_pub_, task_change_pub_;
+    takeoff_pub, polytraj_pub, goal_pub_, gps_origin_pub, minco_debug_pub_, 
+    miniminco_debug_pub_, takeoff_land_from_bridge_pub_, trigger_pub_ , mandatory_stop_pub_;
+
+ros::Publisher other_object_observation_pub_,mission_pub_, tracktargetstate_pub_;
+
 swarm_bridge::DroneState drone_state_;
 ros::Time last_heartbeat_stamp_;
 unique_ptr<DataCompression> compresser_;
@@ -135,26 +140,34 @@ void uwb_receiver_cb(const nlink_parser::LinktrackNodeframe0::ConstPtr &msg) {
                 break;
             }
             case MESSAGE_TYPE::TAKEOFF_LAND: {
-                quadrotor_msgs::TakeOffLandToBridge takeoff_land_cmd;
-                deserializeTopic(takeoff_land_cmd);
-                quadrotor_msgs::TakeoffLand takeoff_land_cmd_;
-                quadrotor_msgs::TakeOffLandToBridge cmd_from_bridge =
-                    takeoff_land_cmd;
-                cmd_from_bridge.drone_id = node.id;
-                takeoff_land_from_bridge_pub_.publish(cmd_from_bridge);
-                takeoff_land_cmd_.takeoff_land_cmd =
-                    takeoff_land_cmd.takeoff_land_cmd;
-                takeoff_pub.publish(takeoff_land_cmd_);
-                if (takeoff_land_cmd.takeoff_land_cmd == 1) {
-                    ROS_INFO("TAKEOFF_CMD RECEIVED");
+                quadrotor_msgs::TakeOffLandToBridge takeoff_land_cmd_from_bridge;
+                deserializeTopic(takeoff_land_cmd_from_bridge);
 
-                } else {
-                    ROS_INFO("LAND_CMD RECEIVED");
+                // send back to sender
+                // quadrotor_msgs::TakeOffLandToBridge cmd_from_bridge = takeoff_land_cmd_from_bridge;
+                // cmd_from_bridge.drone_id = node.id;
+                // takeoff_land_from_bridge_pub_.publish(cmd_from_bridge);
+
+                if(self_id_ == takeoff_land_cmd_from_bridge.drone_id || takeoff_land_cmd_from_bridge.drone_id == 255){
+                    quadrotor_msgs::TakeoffLand takeoff_land_cmd_local;
+                    takeoff_land_cmd_local.takeoff_land_cmd =
+                    takeoff_land_cmd_from_bridge.takeoff_land_cmd;
+                    takeoff_pub.publish(takeoff_land_cmd_local);
                 }
-                // 桥接
+                if (takeoff_land_cmd_from_bridge.takeoff_land_cmd == 1) {
+                    ROS_INFO("TAKEOFF_CMD FOR DRONE %d RECEIVED", takeoff_land_cmd_from_bridge.drone_id);
+
+                } else if (takeoff_land_cmd_from_bridge.takeoff_land_cmd == 2) {
+                    ROS_INFO("LAND_CMD FOR DRONE %d RECEIVED", takeoff_land_cmd_from_bridge.drone_id);
+                }
+                else{
+                    ROS_ERROR("Unknown takeoff_land_cmd");
+                }
+
+                // forward to other drones
                 static ros::Time last_send_takeoff_;
                 if ((ros::Time::now() - last_send_takeoff_).toSec() > 0.5) {
-                    uwbSend(MESSAGE_TYPE::TAKEOFF_LAND, takeoff_land_cmd);
+                    uwbSend(MESSAGE_TYPE::TAKEOFF_LAND, takeoff_land_cmd_from_bridge);
                     last_send_takeoff_ = ros::Time::now();
                 }
                 break;
@@ -221,27 +234,33 @@ void uwb_receiver_cb(const nlink_parser::LinktrackNodeframe0::ConstPtr &msg) {
                 break;
             }
 
-            case MESSAGE_TYPE::T_C:{
-                mission_msgs::Task task;
-                deserializeTopic(task);
-                task_change_pub_.publish(task);
-                static ros::Time last_send_task_change_;
-                if ((ros::Time::now() - last_send_task_change_).toSec() > 0.5) {
-                    uwbSend(MESSAGE_TYPE::T_C, task);
-                    last_send_task_change_ = ros::Time::now();
+            case MESSAGE_TYPE::MS:{
+                mission_msgs::Mission mission;
+                deserializeTopic(mission);
+                mission_pub_.publish(mission);
+                static ros::Time last_send_mission;
+                // forward to other drones
+                if ((ros::Time::now() - last_send_mission).toSec() > 0.5) {
+                    uwbSend(MESSAGE_TYPE::MS, mission);
+                    last_send_mission = ros::Time::now();
                 }
                 break;
             }
-            case MESSAGE_TYPE::TR_IF: {
-                mission_msgs::TrackInfo track_info;
-                deserializeTopic(track_info);
-                other_track_info_pub_.publish(track_info);
+            case MESSAGE_TYPE::TR_ST:{
+                mission_msgs::TrackTargetState track_target_state;
+                deserializeTopic(track_target_state);
+                tracktargetstate_pub_.publish(track_target_state);
+            }
+            case MESSAGE_TYPE::OB_OV: {
+                mission_msgs::ObjectObservation object_observation;
+                deserializeTopic(object_observation);
+                other_object_observation_pub_.publish(object_observation);
                 // send
-                static ros::Time last_send_track_info_;
-                if ((ros::Time::now() - last_send_track_info_).toSec() > 0.2) {
-                    uwbSend(MESSAGE_TYPE::TR_IF, track_info);
-                    last_send_track_info_ = ros::Time::now();
-                }
+                // static ros::Time last_send_object_observation;
+                // if ((ros::Time::now() - last_send_object_observation).toSec() > 0.2) {
+                //     uwbSend(MESSAGE_TYPE::TR_OV, object_observation);
+                //     last_send_object_observation = ros::Time::now();
+                // }
                 break;
             }
             default:
@@ -357,9 +376,24 @@ void state_sender_cb(const ros::TimerEvent &) {
     drone_state_mtx.unlock();
 }
 
-void self_track_info_cb(const mission_msgs::TrackInfo::ConstPtr &msg) {
-    uwbSend(MESSAGE_TYPE::TR_IF, *msg);
+void self_object_observation_cb(const mission_msgs::ObjectObservation::ConstPtr &msg) {
+    // limit sending rate
+    static ros::Time last_send_time = ros::Time(0);
+    if((ros::Time::now()-last_send_time).toSec() > 0.05){ // 20hz max
+        uwbSend(MESSAGE_TYPE::OB_OV, *msg);
+        last_send_time = ros::Time::now();
+    }
 }
+
+void track_target_state_cb(const mission_msgs::TrackTargetState::ConstPtr &msg) {
+    // limit sending rate
+    static ros::Time last_send_time = ros::Time(0);
+    if((ros::Time::now()-last_send_time).toSec() > 0.05){ // 20hz max
+        uwbSend(MESSAGE_TYPE::TR_ST, *msg);
+        last_send_time = ros::Time::now();
+    }
+}
+
 int main(int argc, char **argv) {
     ros::init(argc, argv, "uwb_bridge");
     ros::NodeHandle nh("~");
@@ -372,12 +406,9 @@ int main(int argc, char **argv) {
     uwb_pub = nh.advertise<std_msgs::String>(
         "/nlink_linktrack_data_transmission", 100);
     other_odoms_pub_ = nh.advertise<nav_msgs::Odometry>("/others_odom", 10);
-    other_track_info_pub_ = nh.advertise<mission_msgs::TrackInfo>("/others_track_info", 100);
 
     minco_traj_pub_ =
         nh.advertise<traj_utils::MINCOTraj>("/broadcast_traj_to_planner", 100);
-
-
 
     takeoff_pub =
         nh.advertise<quadrotor_msgs::TakeoffLand>("/px4ctrl/takeoff_land", 100);
@@ -393,15 +424,11 @@ int main(int argc, char **argv) {
     trigger_pub_ =
         nh.advertise<geometry_msgs::PoseStamped>("/traj_start_trigger",10);
     mandatory_stop_pub_ = nh.advertise<std_msgs::Empty>("/mandatory_stop_from_bridge", 10);
-    task_change_pub_ = nh.advertise<mission_msgs::Task>("/task_change", 100);
 
     ros::Subscriber self_odom_sub = nh.subscribe<nav_msgs::Odometry>(
         "my_odom", 100, self_odom_sub_cb, ros::TransportHints().tcpNoDelay());
     ros::Subscriber odom_origin_sub = nh.subscribe<nav_msgs::Odometry>(
         "/odom_add_bias", 100, odom_origin_msg_cb);
-
-    ros::Subscriber self_track_info_sub = nh.subscribe<mission_msgs::TrackInfo>(
-        "/self_track_info", 100, self_track_info_cb, ros::TransportHints().tcpNoDelay());
 
     ros::Subscriber takeoff_sub =
         nh.subscribe("/takeoff_land_user2brig", 100, takeoff_land_sub_cb,
@@ -426,6 +453,21 @@ int main(int argc, char **argv) {
         "/mavros/battery", 100, battery_state_msg_cb);
     ros::Subscriber gps_sub = nh.subscribe<sensor_msgs::NavSatFix>(
         "/mavros/global_position/raw/fix", 100, gps_msg_cb);
+
+
+    // track target state 
+    tracktargetstate_pub_ = nh.advertise<mission_msgs::TrackTargetState>("/track_state_from_bridge",10);
+    ros::Subscriber track_target_state_sub = nh.subscribe<mission_msgs::TrackTargetState>(
+        "/track_state_to_bridge", 10, track_target_state_cb, ros::TransportHints().tcpNoDelay());
+
+    // track observation
+     ros::Subscriber self_object_observation_sub = nh.subscribe<mission_msgs::ObjectObservation>(
+        "/object_observation_to_bridge", 100, self_object_observation_cb, ros::TransportHints().tcpNoDelay());
+    other_object_observation_pub_ = nh.advertise<mission_msgs::ObjectObservation>("/others_object_observation", 100);
+
+    // mission 
+    mission_pub_ = nh.advertise<mission_msgs::Mission>("/mission", 10);
+
 
     // send odom in a fixed rate (hz)
     ros::Timer odom_sender =

@@ -1,0 +1,4 @@
+int16 drone_id
+int16 object_id
+time view_time
+nav_msgs/Odometry object_ekf_odom

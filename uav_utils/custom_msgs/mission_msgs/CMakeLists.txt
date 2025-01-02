@@ -17,9 +17,10 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
-  Task.msg
+  Mission.msg
   TrackInfo.msg
-  TargetObservation.msg
+  ObjectObservation.msg
+  TrackTargetState.msg
 )
 generate_messages(
   DEPENDENCIES
