@@ -381,12 +381,14 @@ void PX4CtrlFSM::process()
 		}
 
 		else{
+			static bool start_takefoff_flag = false;
 			if ((now_time - takeoff_land.toggle_takeoff_land_time).toSec() < AutoTakeoffLand_t::MOTORS_SPEEDUP_TIME) // Wait for several seconds to warn prople.
 			{
 				des = get_rotor_speed_up_des(now_time);
 			}
 			else if (odom_data.p(2) >= (takeoff_land.start_pose(2) + param.takeoff_land.height) || rc_data.exit_takeoff || mandatory_stop_from_bridge_) // reach the desired height or exit with rc or mandatory stop from bridge
 			{
+				start_takefoff_flag = false;
 				state = AUTO_HOVER;
 				set_hov_with_odom();
 				ROS_INFO("\033[32m[px4ctrl] AUTO_TAKEOFF --> AUTO_HOVER(L2)\033[32m");
@@ -396,6 +398,11 @@ void PX4CtrlFSM::process()
 			}
 			else
 			{
+				if(!start_takefoff_flag)
+				{
+					set_start_pose_for_takeoff_land(odom_data); // avoid odom drift during motors speed up
+					start_takefoff_flag = true;
+				}
 				des = get_takeoff_land_des(param.takeoff_land.speed);
 			}
 		}
