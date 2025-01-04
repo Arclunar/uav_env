@@ -7,6 +7,7 @@
     <arg name="odom_to_broadcast" default="/ekf/ekf_odom_corrected" />
     <arg name="serial_port" value="/dev/ttyUSB0" />
     <arg name="uwb_port" default="/dev/ttyTHS0"/>
+    <arg name="takeoffland_cmd_topic" default="/takeoffland_cmd"/>
 
     <!-- uwb commnunication -->
     <include file="$(find swarm_bridge)/launch/all_bridge.launch">
@@ -15,6 +16,7 @@
         <arg name="uwb_port" value="$(arg uwb_port)" />
         <arg name="odom_to_broadcast" value="$(arg odom_to_broadcast)" />
         <arg name="drone_num" default="$(arg drone_num)" />
+        <arg name="takeoffland_cmd_topic" value="$(arg takeoffland_cmd_topic)"/>
     </include>
 
     <!-- odom correction via uwb distance estimation -->

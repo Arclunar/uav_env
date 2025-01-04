@@ -428,7 +428,7 @@ int main(int argc, char **argv) {
         nh.advertise<traj_utils::MINCOTraj>("/broadcast_traj_to_planner", 100);
 
     takeoff_pub =
-        nh.advertise<quadrotor_msgs::TakeoffLand>("/px4ctrl/takeoff_land", 100);
+        nh.advertise<quadrotor_msgs::TakeoffLand>("takeoffland_cmd", 100);
     gps_origin_pub = nh.advertise<swarm_bridge::gps>("/gps_mean", 100);
     minco_debug_pub_ = nh.advertise<traj_utils::MINCOTraj>("/minco_debug", 100);
     miniminco_debug_pub_ =

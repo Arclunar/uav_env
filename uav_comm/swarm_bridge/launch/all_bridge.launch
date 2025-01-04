@@ -5,6 +5,7 @@
 
     <arg name="drone_id" default="0" />
     <arg name="drone_num" default="2" />
+    <arg name="takeffland_cmd_topic" default="/takeoffland_cmd"/> 
     <!-- <arg name="drone_0_ip" default="192.168.1.1" />
     <arg name="drone_1_ip" default="192.168.1.2" /> -->
 
@@ -45,6 +46,7 @@
         <param name="self_id" value="$(arg drone_id)" />
         <param name="drone_num" value="$(arg drone_num)" />
         <remap from="~my_odom" to="$(arg odom_to_broadcast)" />
+        <remap from="~takeoffland_cmd" to="$(arg takeffland_cmd_topic)"/>
    
     </node>
     
