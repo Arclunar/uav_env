@@ -15,6 +15,7 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
+#include <std_msgs/String.h>
 
 
 #include "input.h"
@@ -60,6 +61,7 @@ public:
 	ros::ServiceClient set_FCU_mode_srv;
 	ros::ServiceClient arming_client_srv;
 	ros::ServiceClient reboot_FCU_srv;
+	ros::Publisher led_cmd_pub_;
 
 	quadrotor_msgs::Px4ctrlDebug debug_msg; //debug
 
@@ -102,6 +104,7 @@ private:
 	void motors_idling(const Imu_Data_t &imu, Controller_Output_t &u);
 	void land_detector(const State_t state, const Desired_State_t &des, const Odom_Data_t &odom); // Detect landing 
 	void set_start_pose_for_takeoff_land(const Odom_Data_t &odom);
+	void set_start_xy_for_takeoff_land(const Odom_Data_t &odom);
 	Desired_State_t get_rotor_speed_up_des(const ros::Time now);
 	Desired_State_t get_takeoff_land_des(const double speed);
 

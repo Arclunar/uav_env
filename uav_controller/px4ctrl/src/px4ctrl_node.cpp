@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
     fsm.cancel_mandatory_stop_pub = nh.advertise<std_msgs::Empty>("/cancel_mandatory_stop", 10);
     fsm.set_FCU_mode_srv = nh.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
     fsm.arming_client_srv = nh.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
+    fsm.led_cmd_pub_ = nh.advertise<std_msgs::String>("/led_controller_in", 10);
 
     fsm.reboot_FCU_srv = nh.serviceClient<mavros_msgs::CommandLong>("/mavros/cmd/command");
     fsm.rosbag_record_pub = nh.advertise<std_msgs::Bool>("/rosbag_control",1);

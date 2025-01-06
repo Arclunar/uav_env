@@ -160,6 +160,9 @@ void PX4CtrlFSM::process()
 			u.thrust = 0.0;
 			publish_attitude_ctrl(u,now_time);
 			state = AUTO_TAKEOFF;
+			
+
+
 			controller.resetThrustMapping();
 			set_start_pose_for_takeoff_land(odom_data);
 			toggle_offboard_mode(true);				  // toggle on offboard before arm
@@ -174,6 +177,9 @@ void PX4CtrlFSM::process()
 				if(toggle_arm_disarm(true))
 				{
 					takeoff_land.toggle_takeoff_land_time = now_time;
+					std_msgs::String led_msg;
+					led_msg.data = "0,255,0";
+					led_cmd_pub_.publish(led_msg);
 				}
 				else{
 					toggle_offboard_mode(false);				  // back to manual mode
@@ -400,7 +406,7 @@ void PX4CtrlFSM::process()
 			{
 				if(!start_takefoff_flag)
 				{
-					set_start_pose_for_takeoff_land(odom_data); // avoid odom drift during motors speed up
+					set_start_xy_for_takeoff_land(odom_data); // avoid odom drift during motors speed up
 					start_takefoff_flag = true;
 				}
 				des = get_takeoff_land_des(param.takeoff_land.speed);
@@ -495,6 +501,10 @@ void PX4CtrlFSM::process()
 						std_msgs::Bool record_msg;
 						record_msg.data= false;
 						rosbag_record_pub.publish(record_msg);
+
+						std_msgs::String led_msg;
+						led_msg.data = "255,0,0";
+						led_cmd_pub_.publish(led_msg);
 					}
 
 					last_trial_time = now_time.toSec();
@@ -763,6 +773,15 @@ void PX4CtrlFSM::set_hov_with_rc()
 	// 	}
 	// }
 }
+
+void PX4CtrlFSM::set_start_xy_for_takeoff_land(const Odom_Data_t &odom)
+{
+	ROS_INFO("start xy :%f %f %f",odom.p.x(),odom.p.y(),odom.p.z());
+	takeoff_land.start_pose.x() = odom.p.x();
+	takeoff_land.start_pose.y() = odom.p.y();
+	takeoff_land.start_pose(3) = get_yaw_from_quaternion(odom_data.q);
+}
+
 
 void PX4CtrlFSM::set_start_pose_for_takeoff_land(const Odom_Data_t &odom)
 {
