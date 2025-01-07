@@ -37,6 +37,8 @@ PX4CtrlFSM::PX4CtrlFSM(Parameter_t &param_, Controller &controller_) : param(par
 
 void PX4CtrlFSM::process()
 {
+	const double led_msg_interval = 0.2;
+	static ros::Time last_send_led_msg_time = ros::Time(0);
 	static ros::Time last_echo_fsm_time = ros::Time(0);
 
 
@@ -90,6 +92,15 @@ void PX4CtrlFSM::process()
 	{
 	case MANUAL_CTRL:
 	{
+	  	// red light in MANUAL_CTRL
+		if((ros::Time::now() - last_send_led_msg_time).toSec() > led_msg_interval)
+		{
+			std_msgs::String led_msg;
+			led_msg.data = "255,0,0";
+			led_cmd_pub_.publish(led_msg);
+			last_send_led_msg_time = ros::Time::now();
+		}
+
 		if (rc_data.enter_hover_mode) // Try to jump to AUTO_HOVER
 		{
 			if (!odom_is_received(now_time))
@@ -177,9 +188,6 @@ void PX4CtrlFSM::process()
 				if(toggle_arm_disarm(true))
 				{
 					takeoff_land.toggle_takeoff_land_time = now_time;
-					std_msgs::String led_msg;
-					led_msg.data = "0,255,0";
-					led_cmd_pub_.publish(led_msg);
 				}
 				else{
 					toggle_offboard_mode(false);				  // back to manual mode
@@ -214,6 +222,14 @@ void PX4CtrlFSM::process()
 
 	case AUTO_HOVER:
 	{
+		// green light in AUTO_HOVER
+		if((ros::Time::now() - last_send_led_msg_time).toSec() > led_msg_interval)
+		{
+			std_msgs::String led_msg;
+			led_msg.data = "0,255,0";
+			led_cmd_pub_.publish(led_msg);
+			last_send_led_msg_time = ros::Time::now();
+		}
 		// land cmd is the highestpriority
 		if(rc_data.toggle_land)
 		{
@@ -244,6 +260,8 @@ void PX4CtrlFSM::process()
 				state = CMD_CTRL;
 				des = get_cmd_des();
 				ROS_INFO("\033[32m[px4ctrl] AUTO_HOVER(L2) --> CMD_CTRL(L3)\033[32m");
+
+
 			}
 		}
 		else if (takeoff_land_data.triggered && takeoff_land_data.takeoff_land_cmd == quadrotor_msgs::TakeoffLand::LAND)
@@ -279,6 +297,18 @@ void PX4CtrlFSM::process()
 
 	case CMD_CTRL:
 	{
+		// blue light in CMD_CTRL
+		if((ros::Time::now() - last_send_led_msg_time).toSec() > led_msg_interval)
+		{
+			std_msgs::String led_msg;
+			led_msg.data = "0,0,255";
+			led_cmd_pub_.publish(led_msg);
+			last_send_led_msg_time = ros::Time::now();
+		}
+
+		std_msgs::String led_msg;
+		led_msg.data = "0,0,255";
+		led_cmd_pub_.publish(led_msg);
 		if (!rc_data.is_hover_mode || !odom_is_received(now_time))
 		{
 			state = MANUAL_CTRL;
@@ -312,6 +342,14 @@ void PX4CtrlFSM::process()
 
 	case AUTO_TAKEOFF:
 	{
+		// orange light in AUTO_TAKEOFF
+		if((ros::Time::now() - last_send_led_msg_time).toSec() > led_msg_interval)
+		{
+			std_msgs::String led_msg;
+			led_msg.data = "255,165,0";
+			led_cmd_pub_.publish(led_msg);
+			last_send_led_msg_time = ros::Time::now();
+		}
 		if (!rc_data.is_hover_mode || !odom_is_received(now_time))
 		{
 			state = MANUAL_CTRL;
@@ -420,6 +458,14 @@ void PX4CtrlFSM::process()
 
 	case AUTO_LAND:
 	{
+		// purple light in AUTO_LAND
+		if((ros::Time::now() - last_send_led_msg_time).toSec() > led_msg_interval)
+		{
+			std_msgs::String led_msg;
+			led_msg.data = "128,0,128";
+			led_cmd_pub_.publish(led_msg);
+			last_send_led_msg_time = ros::Time::now();
+		}
 		static bool if_enter_land_flag = false;
 
 		if (!rc_data.is_hover_mode || !odom_is_received(now_time))
@@ -501,10 +547,6 @@ void PX4CtrlFSM::process()
 						std_msgs::Bool record_msg;
 						record_msg.data= false;
 						rosbag_record_pub.publish(record_msg);
-
-						std_msgs::String led_msg;
-						led_msg.data = "255,0,0";
-						led_cmd_pub_.publish(led_msg);
 					}
 
 					last_trial_time = now_time.toSec();
