@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   cv_bridge
   message_filters
+  nlink_parser
 )
 
 catkin_package(
@@ -41,5 +42,13 @@ add_executable(${PROJECT_NAME}_comp_bias
     src/odom_converter_node.cpp 
 )
 target_link_libraries( ${PROJECT_NAME}_comp_bias
+    ${catkin_LIBRARIES} 
+)
+
+add_executable(${PROJECT_NAME}_uwb_odom
+    src/odom_converter_uwb_odom.cpp 
+    src/odom_converter_node.cpp 
+)
+target_link_libraries( ${PROJECT_NAME}_uwb_odom
     ${catkin_LIBRARIES} 
 )

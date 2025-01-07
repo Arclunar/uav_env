@@ -1,0 +1,16 @@
+<launch>
+    <arg name="capture_num_"   value="2"/>
+
+    <node pkg="odom_converter" type="odom_converter_uwb_odom" name="uwb_odom_converter" output="screen">
+        <!-- <arg name="capture_num"   value="$(arg capture_num_)"/> -->
+        <!-- <param name="cap_num" value="$(arg capture_num_)"     type="int" /> -->
+        <!-- <remap from="~/pose0" to="/vrpn_client_node/coax01/pose"/> -->
+        <remap from="~/odom" to="/mavros/global_position/local"/>
+        <remap from="~/pose" to="/vrpn_client_node/coax01/pose"/>
+        <remap from="~/uwb" to="/nlink_linktrack_tagframe0"/>
+
+        
+    </node>
+
+</launch>
+
