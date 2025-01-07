@@ -61,13 +61,13 @@ class AnchorTriangulationErrorTerm {
                                        const bool optimize_z,
                                        const double gps_x, const double gps_y,
                                        double fixed_z) {
-        // if (optimize_z)
-        //     return (
-        //         new ceres::AutoDiffCostFunction<AnchorTriangulationErrorTerm,
-        //         1,
-        //                                         1, 1, 1>(
-        //             new AnchorTriangulationErrorTerm(anchor, r, weight)));
-        // else
+        if (optimize_z)
+            return (
+                new ceres::AutoDiffCostFunction<AnchorTriangulationErrorTerm,
+                1,
+                                                1, 1, 1>(
+                    new AnchorTriangulationErrorTerm(anchor, r, weight)));
+        else
         return (
             new ceres::AutoDiffCostFunction<AnchorTriangulationErrorTerm, 1, 1,
                                             1>(new AnchorTriangulationErrorTerm(

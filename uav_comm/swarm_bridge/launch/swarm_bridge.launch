@@ -24,6 +24,7 @@
         <arg name="drone_id" default="$(arg drone_id)" />
         <arg name="odom_topic" default="$(arg odom_add_bias)" />
         <arg name="corrected_odom_topic" default="$(arg odom_to_broadcast)" />
+        <param name="optimize_z" value="true"/>
     </include>
 
     <!-- make local frame consistency for multi drones  /ekf/ekf_odom -> /odom_add_bias-->
