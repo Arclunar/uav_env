@@ -37,8 +37,6 @@ PX4CtrlFSM::PX4CtrlFSM(Parameter_t &param_, Controller &controller_) : param(par
 
 void PX4CtrlFSM::process()
 {
-	const double led_msg_interval = 0.2;
-	static ros::Time last_send_led_msg_time = ros::Time(0);
 	static ros::Time last_echo_fsm_time = ros::Time(0);
 
 
