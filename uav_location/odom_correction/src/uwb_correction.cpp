@@ -66,7 +66,7 @@ class AnchorTriangulationErrorTerm {
                 new ceres::AutoDiffCostFunction<AnchorTriangulationErrorTerm,
                 1,
                                                 1, 1, 1>(
-                    new AnchorTriangulationErrorTerm(anchor, r, weight)));
+                    new AnchorTriangulationErrorTerm(anchor, r, weight,gps_x,gps_y,fixed_z)));
         else
         return (
             new ceres::AutoDiffCostFunction<AnchorTriangulationErrorTerm, 1, 1,
