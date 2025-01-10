@@ -19,14 +19,14 @@
         <arg name="takeoffland_cmd_topic" value="$(arg takeoffland_cmd_topic)"/>
     </include>
 
-    <node pkg="topic_tools" type="relay" name="relay_odom" args="$(arg odom_origin) $(arg odom_to_broadcast)" output="screen"/>
+    <node pkg="topic_tools" type="relay" name="relay_odom" args="$(arg odom_origin) $(arg odom_add_bias)" output="screen"/>
 
     <!-- odom correction via uwb distance estimation -->
-    <!-- <include file="$(find odom_correction)/launch/uwb_correction.launch">
+    <include file="$(find odom_correction)/launch/uwb_correction.launch">
         <arg name="drone_id" default="$(arg drone_id)" />
         <arg name="odom_topic" default="$(arg odom_add_bias)" />
         <arg name="corrected_odom_topic" default="$(arg odom_to_broadcast)" />
-    </include> -->
+    </include>
 
     <!-- make local frame consistency for multi drones  /ekf/ekf_odom -> /odom_add_bias-->
     <!-- <node name="convert_odom" pkg="ego_planner" type="convert_odom.py" output="screen">
