@@ -6,6 +6,7 @@
   <arg name="init_x" default="0.0" />
   <arg name="init_y" default="0.0" />
   <arg name="init_z" default="0.0" />
+  <arg name="optimize_z" default="false" />
 
   <node pkg="odom_correction" name="odom_correction" type="uwb_correction"
     output="screen">
@@ -17,7 +18,7 @@
     <param name="min_odom_distance" value="0.1" />
     <param name="filter_factor" value="0.01" />
     <param name="max_drift_change_rate" value="0.05" />
-    <param name="optimize_z" value="false" />
+    <param name="optimize_z" value="$(arg optimize_z)" />
     <param name="fixed_anchor_num" value="0" type="int" />
     <param name="init_x" value="$(arg init_x)" type="double" />
     <param name="init_y" value="$(arg init_y)" type="double" />
