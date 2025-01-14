@@ -1,4 +1,9 @@
 int16 drone_id
 int16 object_id
 time view_time
-nav_msgs/Odometry object_ekf_odom
+float32 object_x  
+float32 object_y 
+float32 object_z
+float32 object_vx
+float32 object_vy
+float32 object_vz

@@ -45,8 +45,10 @@
     <node pkg="swarm_bridge" type="bridge_node_uwb" name="bridge_node_uwb" output="screen" respawn="true">
         <param name="self_id" value="$(arg drone_id)" />
         <param name="drone_num" value="$(arg drone_num)" />
+        <param name="state_send_rate" value="10"/>
         <remap from="~my_odom" to="$(arg odom_to_broadcast)" />
         <remap from="~takeoffland_cmd" to="$(arg takeffland_cmd_topic)"/>
+
    
     </node>
     
