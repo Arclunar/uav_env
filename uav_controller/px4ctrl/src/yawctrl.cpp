@@ -16,7 +16,7 @@ constexpr double YAW_DOT_DOT_MAX_PER_SEC = 5 * M_PI;
 void fix_yaw_cmd_cb(const std_msgs::Float64::ConstPtr& msg) {
     yaw_cmd_ = msg->data;
     // print in green color
-    ROS_INFO("\033[32m[yaw_cmd_] yaw_cmd_: %f\033[0m", yaw_cmd_);
+    ROS_INFO_THROTTLE(5.0,"\033[32m[yaw_cmd_] yaw_cmd_: %f\033[0m", yaw_cmd_);
 }
 
 ros::Publisher pub;
