@@ -61,3 +61,12 @@ target_link_libraries(px4ctrl_node
 catkin_install_python(PROGRAMS thrust_calibrate_scrips/thrust_calibrate.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+add_executable(yawctrl_node
+    src/yawctrl.cpp)
+  
+target_link_libraries(yawctrl_node
+  ${catkin_LIBRARIES}
+)
+
+add_dependencies(yawctrl_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

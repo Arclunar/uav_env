@@ -17,12 +17,30 @@ class RosbagRecorder:
         # Initialize the ROS node
         rospy.init_node('rosbag_recorder', anonymous=True)
 
+        self.drone_id = rospy.get_param('~drone_id', 0)  # Default to 0 if not set
+
+        # print the drone id
+        rospy.loginfo("Drone ID: {}".format(self.drone_id))
+
         # Create a subscriber to the 'rosbag_control' topic
         self.subscriber = rospy.Subscriber('rosbag_control', Bool, self.control_callback)
 
         # Topics to record
         self.topics_to_record = [
-            '/pos_cmd',
+            # drone_$(arg drone_id)_planning/pos_yaw_cmd
+            '/drone_{0}_planning/pos_yaw_cmd'.format(self.drone_id),
+            # drone_$(arg drone_id)_planning/pos_cmd
+            '/drone_{0}_planning/pos_cmd'.format(self.drone_id),
+            # drone_$(arg drone_id)_object_odom_to_planner
+            '/drone_{0}_object_odom_to_planner'.format(self.drone_id),
+            # drone_<drone_id>_ekf_object_odom_0
+            '/drone_{0}_ekf_object_odom_0'.format(self.drone_id),
+            # drone_<drone_id>_ekf_object_odom_1
+            '/drone_{0}_ekf_object_odom_1'.format(self.drone_id),
+            # drone_<drone_id>_optimal_list
+            '/drone_{0}_optimal_list'.format(self.drone_id),
+            # drone_<drone_id>_global_list
+            '/drone_{0}_global_list'.format(self.drone_id),
             '/mavros/local_position/pose',
             '/mavros/global_position/local',
             '/micolink_tof',
