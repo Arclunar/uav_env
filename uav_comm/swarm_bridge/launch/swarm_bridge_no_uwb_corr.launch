@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="drone_id" default="0" />
+    <arg name="drone_num" value="6" />
+    <arg name="odom_origin" default="/ekf/ekf_odom"/>
+    <arg name="odom_add_bias" default="/odom_add_bias" />
+    <arg name="odom_to_broadcast" default="/ekf/ekf_odom_corrected" />
+    <arg name="serial_port" value="/dev/ttyUSB0" />
+    <arg name="uwb_port" default="/dev/ttyTHS0"/>
+    <arg name="takeoffland_cmd_topic" default="/takeoffland_cmd"/>
+
+    <!-- uwb commnunication -->
+    <include file="$(find swarm_bridge)/launch/all_bridge.launch">
+        <arg name="drone_id" default="$(arg drone_id)" />
+        <arg name="serial_port" value="$(arg serial_port)" />
+        <arg name="uwb_port" value="$(arg uwb_port)" />
+        <arg name="odom_to_broadcast" value="$(arg odom_to_broadcast)" />
+        <arg name="drone_num" default="$(arg drone_num)" />
+        <arg name="takeoffland_cmd_topic" value="$(arg takeoffland_cmd_topic)"/>
+    </include>
+
+    <!-- odom correction via uwb distance estimation /odom_add_bias -> /ekf/ekf_odom_corrected -->
+    <!-- <include file="$(find odom_correction)/launch/uwb_correction.launch">
+        <arg name="drone_id" default="$(arg drone_id)" />
+        <arg name="odom_topic" default="$(arg odom_add_bias)" />
+        <arg name="corrected_odom_topic" default="$(arg odom_to_broadcast)" />
+        <arg name="optimize_z" value="true"/>
+    </include> -->
+    <node pkg="topic_tools" type="relay" name="relay_odom" args="$(arg odom_add_bias) $(arg odom_to_broadcast)" output="screen"/>
+
+    <!-- make local frame consistency for multi drones  /ekf/ekf_odom -> /odom_add_bias-->
+    <node name="convert_odom" pkg="ego_planner" type="convert_odom.py" output="screen">
+        <param name="drone_id" value="$(arg drone_id)"/>
+        <rosparam command="load" file="$(find ego_planner)/launch/swarm_param.yaml"/>
+        <remap from="odom_in" to="$(arg odom_origin)"/>
+        <remap from="odom_out" to="$(arg odom_add_bias)"/>
+    </node>
+</launch>

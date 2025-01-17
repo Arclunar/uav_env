@@ -73,8 +73,5 @@
         </node>
     </group>
 
-
     <node name="echo_state" pkg="ekf" type="echo_state" output="screen"/>
-
-
 </launch>
