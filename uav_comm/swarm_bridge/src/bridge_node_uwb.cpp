@@ -19,6 +19,8 @@
 #include <mission_msgs/Mission.h>
 #include <mission_msgs/ObjectObservation.h>
 #include <mission_msgs/TrackTargetState.h>
+#include <mission_msgs/TrackTargetSet.h>
+#include <std_msgs/Int8.h>
 
 /*
     每个数据帧不得超过0.1KB，一个原生的odom是0.7kb，所以需要适当压缩
@@ -40,7 +42,8 @@ enum MESSAGE_TYPE {
     STOP,       // Mandotory stop 强制悬停
     MS,       // Mission 任务切换
     OB_OV,     // Object Observation 发送的飞机ID、被跟踪物体的ID、被跟踪物体odom
-    TR_ST      // Track Target State 跟踪是否ready
+    TR_ST,      // Track Target State 跟踪是否ready
+    TR_ID,     // Track Target ID 追踪目标ID设置
 };
 #define BUF_LEN 1048576  // 1MB, 实测只能发0.1KB
 std::mutex send_mtx, rec_mtx, drone_state_mtx;
@@ -49,7 +52,7 @@ ros::Publisher uwb_pub, other_odoms_pub_, minco_traj_pub_, takeoff_bridge_pub,
     takeoff_pub, polytraj_pub, goal_pub_, gps_origin_pub, minco_debug_pub_, 
     miniminco_debug_pub_, takeoff_land_from_bridge_pub_, trigger_pub_ , mandatory_stop_pub_;
 
-ros::Publisher other_object_observation_pub_,mission_pub_, tracktargetstate_pub_;
+ros::Publisher other_object_observation_pub_,mission_pub_, tracktargetstate_pub_, track_target_id_pub_;
 
 swarm_bridge::DroneState drone_state_;
 ros::Time last_heartbeat_stamp_;
@@ -280,6 +283,17 @@ void uwb_receiver_cb(const nlink_parser::LinktrackNodeframe0::ConstPtr &msg) {
                 // }
                 break;
             }
+            case MESSAGE_TYPE::TR_ID:{
+                mission_msgs::TrackTargetSet track_target_set;
+                deserializeTopic(track_target_set);
+                if(track_target_set.drone_id != self_id_)
+                {
+                    std_msgs::Int8 new_target_id_msg;
+                    new_target_id_msg.data=track_target_set.target_id;
+                    track_target_id_pub_.publish(new_target_id_msg);
+                }
+                break;
+            }
             default:
                 ROS_ERROR("Unknown received message");
                 break;
@@ -484,6 +498,8 @@ int main(int argc, char **argv) {
 
     // mission 
     mission_pub_ = nh.advertise<mission_msgs::Mission>("/mission", 10);
+
+    track_target_id_pub_ = nh.advertise<std_msgs::Int8>("new_track_target_id", 100);
 
 
     // send odom in a fixed rate (hz)

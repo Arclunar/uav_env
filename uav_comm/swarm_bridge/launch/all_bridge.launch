@@ -48,8 +48,7 @@
         <param name="state_send_rate" value="10"/>
         <remap from="~my_odom" to="$(arg odom_to_broadcast)" />
         <remap from="~takeoffland_cmd" to="$(arg takeffland_cmd_topic)"/>
-
-   
+        <remap from="~new_track_target_id" to="drone_$(arg drone_id)_track_manager/new_target_id"/>
     </node>
     
     <!-- <include file="$(find swarm_bridge)/launch/bridge_tcp_drone.launch">

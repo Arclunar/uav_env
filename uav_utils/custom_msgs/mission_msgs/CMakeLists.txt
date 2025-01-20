@@ -21,6 +21,7 @@ add_message_files(
   TrackInfo.msg
   ObjectObservation.msg
   TrackTargetState.msg
+  TrackTargetSet.msg
 )
 generate_messages(
   DEPENDENCIES
