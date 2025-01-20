@@ -58,6 +58,7 @@ class RosbagRecorder:
             '/debugPx4ctrl',
             '/mavros/setpoint_raw/local',
             '/mavros/setpoint_raw/attitude',
+            '/mavros/battery',
             '/px4ctrl/des_debug',
             '/px4ctrl/fsm_debug'
         ]
