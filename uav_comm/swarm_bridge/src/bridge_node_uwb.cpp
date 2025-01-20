@@ -286,11 +286,12 @@ void uwb_receiver_cb(const nlink_parser::LinktrackNodeframe0::ConstPtr &msg) {
             case MESSAGE_TYPE::TR_ID:{
                 mission_msgs::TrackTargetSet track_target_set;
                 deserializeTopic(track_target_set);
-                if(track_target_set.drone_id != self_id_)
+                if(track_target_set.drone_id == self_id_)
                 {
                     std_msgs::Int8 new_target_id_msg;
                     new_target_id_msg.data=track_target_set.target_id;
                     track_target_id_pub_.publish(new_target_id_msg);
+                    ROS_INFO_THROTTLE(1.0,"new target : %d",track_target_set.target_id);
                 }
                 break;
             }
