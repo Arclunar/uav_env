@@ -1,5 +1,5 @@
-uint8 idle=0
-uint8 formation=1
-uint8 trans=2
-uint8 track=3
-uint8 value
+uint8 mission
+uint8 IDLE=0
+uint8 FORMATION=1
+uint8 TRANS=2
+uint8 TRACK=3

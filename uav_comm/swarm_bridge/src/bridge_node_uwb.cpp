@@ -498,7 +498,7 @@ int main(int argc, char **argv) {
     other_object_observation_pub_ = nh.advertise<mission_msgs::ObjectObservation>("/others_object_observation", 100);
 
     // mission 
-    mission_pub_ = nh.advertise<mission_msgs::Mission>("/mission", 10);
+    mission_pub_ = nh.advertise<mission_msgs::Mission>("/mission_from_bridge", 10);
 
     track_target_id_pub_ = nh.advertise<std_msgs::Int8>("new_track_target_id", 100);
 
