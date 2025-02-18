@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="ekf_odom" default="/ekf/ekf_odom"/>
+    <arg name="node_name" default="ekf"/>
+    <arg name="tof_measure" default="/micolink_tof" />
+    <arg name="odom_raw" value="/mavros/global_position/local" />
+    <arg name="tof_port" value="/dev/ttyTHS1"/>
+    <arg name="tof_is_micolink" default="false"/>
+    <arg name="tof_is_nlink" default="false"/>
+    <arg name="tof_is_px4" default="false"/>
+
+    <node pkg="topic_tools" type="relay" name="odom_to_fcu" args="$(arg odom_raw) $(arg ekf_odom)" />
+
+    
+</launch>
