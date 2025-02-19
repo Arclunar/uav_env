@@ -33,6 +33,9 @@ add_executable(${PROJECT_NAME}
     src/odom_converter.cpp 
     src/odom_converter_node.cpp 
 )
+
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 target_link_libraries( ${PROJECT_NAME}
     ${catkin_LIBRARIES} 
 )
@@ -49,6 +52,9 @@ add_executable(${PROJECT_NAME}_uwb_odom
     src/odom_converter_uwb_odom.cpp 
     src/odom_converter_node.cpp 
 )
+
+add_dependencies(${PROJECT_NAME}_uwb_odom ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 target_link_libraries( ${PROJECT_NAME}_uwb_odom
     ${catkin_LIBRARIES} 
 )
