@@ -287,8 +287,11 @@ void PX4CtrlFSM::process()
 		}
 		else if (!rc_data.is_command_mode || !cmd_is_received(now_time) || mandatory_stop_from_bridge_)
 		{
-			std_msgs::Empty mandatory_stop_msg;
-			mandatory_stop_pub.publish(mandatory_stop_msg);
+			if(!rc_data.is_command_mode || mandatory_stop_from_bridge_)
+			{
+				std_msgs::Empty mandatory_stop_msg;
+				mandatory_stop_pub.publish(mandatory_stop_msg);
+			}
 			state = AUTO_HOVER;
 			set_hov_with_odom();
 			des = get_hover_des();
