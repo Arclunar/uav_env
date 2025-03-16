@@ -657,7 +657,7 @@ void acc_f_pub(Vector3d acc, ros::Time stamp)
 void system_pub(ros::Time stamp)
 {
     if ((ros::Time::now() - last_vio_update_time_).toSec() > 1.0) {
-        ROS_ERROR("vio/gps message timeout. Stopping ekf_odom publishing.");
+        ROS_ERROR_THROTTLE(1.0,"vio/gps message timeout. Stopping ekf_odom publishing.");
         return;
     }
     nav_msgs::Odometry odom_fusion;

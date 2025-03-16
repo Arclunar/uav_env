@@ -41,7 +41,7 @@ void height_estimate_cb(const sensor_msgs::RangeConstPtr& rng) {
 }
 void odom_raw_cb(const nav_msgs::Odometry::ConstPtr& msg) {
     if ((ros::Time::now() - last_height_update_time_).toSec() > 1.0) {
-        ROS_ERROR("height message timeout. Stopping odom_fusion publishing.");
+        ROS_ERROR_THROTTLE(1.0,"height message timeout. Stopping odom_fusion publishing.");
         return;
     }
     nav_msgs::Odometry odom_fusion = *msg;
