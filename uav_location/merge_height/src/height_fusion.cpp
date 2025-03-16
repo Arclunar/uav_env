@@ -11,6 +11,7 @@ double current_height, roll, pitch, yaw;
 double range_sensor_offset_;
 ros::Publisher odom_fusion_pub;
 ros::Publisher fusion_pose_pub;
+ros::Time last_height_update_time_;
 void imu_cb(const sensor_msgs::Imu::ConstPtr& msg) {
     tf2::Quaternion imu_q =
         tf2::Quaternion(msg->orientation.x, msg->orientation.y,
@@ -30,6 +31,8 @@ void height_estimate_cb(const sensor_msgs::RangeConstPtr& rng) {
         return;
     }
 
+    last_height_update_time_ = ros::Time::now();
+
     double height_with_coax_offset = rng->range + range_sensor_offset_;
     // ROS_INFO("range_sensor_offset_ : %.5f",range_sensor_offset_);
     // ROS_INFO("height_with_offset : %f",height_with_coax_offset);
@@ -37,6 +40,10 @@ void height_estimate_cb(const sensor_msgs::RangeConstPtr& rng) {
     // current_height = rng->range * cos(roll) * cos(pitch);
 }
 void odom_raw_cb(const nav_msgs::Odometry::ConstPtr& msg) {
+    if ((ros::Time::now() - last_height_update_time_).toSec() > 1.0) {
+        ROS_ERROR("height message timeout. Stopping odom_fusion publishing.");
+        return;
+    }
     nav_msgs::Odometry odom_fusion = *msg;
     odom_fusion.pose.pose.position.z = current_height;
     odom_fusion_pub.publish(odom_fusion);
@@ -68,6 +75,9 @@ int main(int argc, char** argv) {
         nh.subscribe<sensor_msgs::Imu>("/mavros/imu/data", 100, imu_cb);
 
     odom_fusion_pub = nh.advertise<nav_msgs::Odometry>("odom_fusion", 100);
+
+    last_height_update_time_ = ros::Time(0);
+
 
     ros::spin();
 }

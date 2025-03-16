@@ -107,6 +107,8 @@ double time_now, time_last;
 double time_odom_tag_now;
 // double diff_time;
 
+ros::Time last_vio_update_time_ ;
+
 string world_frame_id = "world";
 
 //world frame points velocity
@@ -400,6 +402,7 @@ VectorXd get_pose_from_VIOodom(const nav_msgs::Odometry::ConstPtr &msg)
 void vioodom_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {//assume that the odom_tag from camera is sychronized with the imus and without delay. !!!
 
+    last_vio_update_time_ = ros::Time::now();
     //your code for update
     if(first_frame_tag_odom)
     {//system begins in first odom frame
@@ -614,6 +617,8 @@ int main(int argc, char **argv)
     // cout << "r: " << r << " p: " << p << " y: " << y << endl;
     // cout << "======================" << endl;
 
+    last_vio_update_time_ = ros::Time(0);
+
     ros::spin();
 }
 
@@ -651,6 +656,10 @@ void acc_f_pub(Vector3d acc, ros::Time stamp)
 }
 void system_pub(ros::Time stamp)
 {
+    if ((ros::Time::now() - last_vio_update_time_).toSec() > 1.0) {
+        ROS_ERROR("vio/gps message timeout. Stopping ekf_odom publishing.");
+        return;
+    }
     nav_msgs::Odometry odom_fusion;
     odom_fusion.header.stamp = stamp;
     // odom_fusion.header.frame_id = world_frame_id;
