@@ -23,7 +23,7 @@ void height_estimate_cb_nlink(
     current_height = tof_msg->dis * cos(roll) * cos(pitch);
 }
 void height_estimate_cb(const sensor_msgs::RangeConstPtr& rng) {
-    if (rng->range == -1) {
+    if (rng->range <= 0.001) {
         if (current_height < 0.5) {
             // ROS_ERROR("RNG SENSOR FIALED");
             current_height = 0.0;
@@ -40,7 +40,7 @@ void height_estimate_cb(const sensor_msgs::RangeConstPtr& rng) {
     // current_height = rng->range * cos(roll) * cos(pitch);
 }
 void odom_raw_cb(const nav_msgs::Odometry::ConstPtr& msg) {
-    if ((ros::Time::now() - last_height_update_time_).toSec() > 1.0) {
+    if ((ros::Time::now() - last_height_update_time_).toSec() > 0.1) {
         ROS_ERROR_THROTTLE(1.0,"height message timeout. Stopping odom_fusion publishing.");
         return;
     }
