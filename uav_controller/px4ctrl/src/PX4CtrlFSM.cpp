@@ -43,11 +43,11 @@ void PX4CtrlFSM::process()
 	if (bat_data.is_init)
 	{
 		param.thr_map.hover_percentage = 
-			param.thr_map.hover_percentage_base + 
+			param.thr_map.hover_percentage_base -
 			param.thr_map.hp_per_voltage * (bat_data.volt - param.standard_voltage);
 		param.thr_map.hover_percentage_inited = true ;
 		// ROS_INFO per 1 second
-		ROS_INFO_THROTTLE(1.0,"voltage : %.3f hp : %.3f", bat_data.volt , param.thr_map.hover_percentage);
+		ROS_INFO_THROTTLE(3.0,"voltage : %.3f hp : %.3f", bat_data.volt , param.thr_map.hover_percentage);
 		if(param.thr_map.hover_percentage < 0.0)
 		{
 			ROS_ERROR("[px4ctrl] Hover percentage is negative! Please check the battery voltage and the hover percentage parameters.");
