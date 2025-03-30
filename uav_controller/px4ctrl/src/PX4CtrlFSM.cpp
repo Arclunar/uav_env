@@ -48,6 +48,18 @@ void PX4CtrlFSM::process()
 		param.thr_map.hover_percentage_inited = true ;
 		// ROS_INFO per 1 second
 		ROS_INFO_THROTTLE(1.0,"voltage : %.3f hp : %.3f", bat_data.volt , param.thr_map.hover_percentage);
+		if(param.thr_map.hover_percentage < 0.0)
+		{
+			ROS_ERROR("[px4ctrl] Hover percentage is negative! Please check the battery voltage and the hover percentage parameters.");
+			param.thr_map.hover_percentage = 0.0;
+			param.thr_map.hover_percentage_inited = false ;
+		}
+		if(param.thr_map.hover_percentage > 0.7)
+		{
+			ROS_ERROR("[px4ctrl] Hover percentage is larger than 0.7! Please check the battery voltage and the hover percentage parameters.");
+			param.thr_map.hover_percentage = 0.7;
+			param.thr_map.hover_percentage_inited = false ;
+		}
 	}
 
 	// battery data timeout
@@ -55,7 +67,7 @@ void PX4CtrlFSM::process()
 	{
 		if ((ros::Time::now() - bat_data.rcv_stamp).toSec() > param.msg_timeout.bat)
 		{
-			ROS_ERROR("[px4ctrl] Battery data timeout!");
+			ROS_ERROR("[px4ctrl] Battery data timeout! hover percentage is invalid.");
 			bat_data.is_init = false;
 			param.thr_map.hover_percentage_inited = false;
 		}
@@ -144,8 +156,7 @@ void PX4CtrlFSM::process()
 			ROS_INFO("\033[32m[px4ctrl] MANUAL_CTRL(L1) --> AUTO_HOVER(L2)\033[32m");
 		}
 		else if (param.takeoff_land.enable 
-		&& ((takeoff_land_data.triggered && takeoff_land_data.takeoff_land_cmd == quadrotor_msgs::TakeoffLand::TAKEOFF) || rc_data.toggle_takeoff) 
-		&& param.thr_map.hover_percentage_inited ) // Try to jump to AUTO_TAKEOFF
+		&& ((takeoff_land_data.triggered && takeoff_land_data.takeoff_land_cmd == quadrotor_msgs::TakeoffLand::TAKEOFF) || rc_data.toggle_takeoff) ) // Try to jump to AUTO_TAKEOFF
 		{
 			if (!odom_is_received(now_time))
 			{
@@ -184,6 +195,11 @@ void PX4CtrlFSM::process()
 					}
 					break;
 				}
+			}
+			if(!param.thr_map.hover_percentage_inited)
+			{
+				ROS_ERROR("[px4ctrl] Reject AUTO_TAKEOFF. Hover percentage is not inited!");
+				break;
 			}
 
 			// stv: publishing offboard attitude cmd is needed before toggle offboard mode
