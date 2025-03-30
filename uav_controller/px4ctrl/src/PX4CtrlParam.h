@@ -39,7 +39,10 @@ public:
 		double K3;
 		bool accurate_thrust_model;
 		double hover_percentage;
+		double hover_percentage_base;
+		double hp_per_voltage;
 		bool noisy_imu;
+		bool hover_percentage_inited = false;
 	};
 
 	struct RCReverse
@@ -73,6 +76,7 @@ public:
 	double ctrl_freq_max;
 	double max_manual_vel;
 	double low_voltage;
+	double standard_voltage;
 
 	bool use_bodyrate_ctrl;
 	bool use_position_ctrl;

@@ -47,6 +47,7 @@ void Parameter_t::config_from_ros_handle(const ros::NodeHandle &nh)
 	read_essential_param(nh, "max_manual_vel", max_manual_vel);
 	read_essential_param(nh, "max_angle", max_angle);
 	read_essential_param(nh, "low_voltage", low_voltage);
+	read_essential_param(nh, "standard_voltage", standard_voltage);
 
 	read_essential_param(nh, "rc_reverse/roll", rc_reverse.roll);
 	read_essential_param(nh, "rc_reverse/pitch", rc_reverse.pitch);
@@ -64,7 +65,8 @@ void Parameter_t::config_from_ros_handle(const ros::NodeHandle &nh)
 	read_essential_param(nh, "thrust_model/K2", thr_map.K2);
 	read_essential_param(nh, "thrust_model/K3", thr_map.K3);
 	read_essential_param(nh, "thrust_model/accurate_thrust_model", thr_map.accurate_thrust_model);
-	read_essential_param(nh, "thrust_model/hover_percentage", thr_map.hover_percentage);
+	read_essential_param(nh, "thrust_model/hover_percentage_base", thr_map.hover_percentage_base);
+	read_essential_param(nh, "thrust_model/hover_percentage_per_voltage", thr_map.hp_per_voltage);
 	read_essential_param(nh, "thrust_model/noisy_imu", thr_map.noisy_imu);
 	
 

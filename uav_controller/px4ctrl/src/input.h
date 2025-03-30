@@ -142,6 +142,7 @@ public:
   sensor_msgs::BatteryState msg;
   ros::Time rcv_stamp;
 
+  bool is_init = false;
   Battery_Data_t();
   void feed(sensor_msgs::BatteryStateConstPtr pMsg);
 };

@@ -39,6 +39,28 @@ void PX4CtrlFSM::process()
 {
 	static ros::Time last_echo_fsm_time = ros::Time(0);
 
+	// update hover percentage based on current battery voltage
+	if (bat_data.is_init)
+	{
+		param.thr_map.hover_percentage = 
+			param.thr_map.hover_percentage_base + 
+			param.thr_map.hp_per_voltage * (bat_data.volt - param.standard_voltage);
+		param.thr_map.hover_percentage_inited = true ;
+		// ROS_INFO per 1 second
+		ROS_INFO_THROTTLE(1.0,"voltage : %.3f hp : %.3f", bat_data.volt , param.thr_map.hover_percentage);
+	}
+
+	// battery data timeout
+	if (bat_is_received(ros::Time::now()))
+	{
+		if ((ros::Time::now() - bat_data.rcv_stamp).toSec() > param.msg_timeout.bat)
+		{
+			ROS_ERROR("[px4ctrl] Battery data timeout!");
+			bat_data.is_init = false;
+			param.thr_map.hover_percentage_inited = false;
+		}
+	}
+
 
 	ros::Time now_time = ros::Time::now();
 	Controller_Output_t u;
@@ -107,6 +129,12 @@ void PX4CtrlFSM::process()
 				ROS_ERROR("[px4ctrl] Reject AUTO_HOVER(L2). Odom_Vel=%fm/s, which seems that the locolization module goes wrong!", odom_data.v.norm());
 				break;
 			}
+			if(!param.thr_map.hover_percentage_inited)
+			{
+				ROS_ERROR("[px4ctrl] Reject AUTO_HOVER(L2). Hover percentage is not inited!");
+				break;
+			}
+
 
 			state = AUTO_HOVER;
 			controller.resetThrustMapping();
@@ -115,7 +143,9 @@ void PX4CtrlFSM::process()
 
 			ROS_INFO("\033[32m[px4ctrl] MANUAL_CTRL(L1) --> AUTO_HOVER(L2)\033[32m");
 		}
-		else if (param.takeoff_land.enable && ((takeoff_land_data.triggered && takeoff_land_data.takeoff_land_cmd == quadrotor_msgs::TakeoffLand::TAKEOFF) || rc_data.toggle_takeoff) ) // Try to jump to AUTO_TAKEOFF
+		else if (param.takeoff_land.enable 
+		&& ((takeoff_land_data.triggered && takeoff_land_data.takeoff_land_cmd == quadrotor_msgs::TakeoffLand::TAKEOFF) || rc_data.toggle_takeoff) 
+		&& param.thr_map.hover_percentage_inited ) // Try to jump to AUTO_TAKEOFF
 		{
 			if (!odom_is_received(now_time))
 			{

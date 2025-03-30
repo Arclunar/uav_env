@@ -13,6 +13,7 @@ use_onboard_takeoff : false
 max_manual_vel: 2.0
 max_angle: 30  # Attitude angle limit in degree. A negative value means no limit.
 low_voltage: 21.0 # 6S battery
+standard_voltage: 25.2 # 6S battery
 
 rc_reverse: # *
     roll: false
@@ -36,7 +37,9 @@ thrust_model: # The model that maps thrust signal u(0~1) to real thrust force F(
     K2: 1.6942 # Needs precise calibration!
     K3: 0.6786 # Needs precise calibration! K3 equals THR_MDL_FAC in https://docs.px4.io/master/en/config_mc/pid_tuning_guide_multicopter.html.
     # approximate thrust mapping parameters
+    # hover percentage = hover_percentage_base + hover_percentage_per_voltage * (battery_voltage - standard_voltage)
     hover_percentage: 0.4 # Thrust percentage in Stabilize/Arco mode # *
+    hover_percentage_per_voltage: 0.1 # 0.0 means no voltage compensation. Needs precise calibration!
 
 gain: 
     # Cascade PID controller. Recommend to read the code.

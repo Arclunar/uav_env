@@ -68,6 +68,8 @@ public:
 	Eigen::Vector4d hover_pose;
 	ros::Time last_set_hover_pose_time;
 
+	bool hover_percentage_calculated_ = false;
+
 
 	enum State_t
 	{

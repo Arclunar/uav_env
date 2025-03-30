@@ -337,6 +337,7 @@ Battery_Data_t::Battery_Data_t()
 
 void Battery_Data_t::feed(sensor_msgs::BatteryStateConstPtr pMsg)
 {
+    is_init = true;
     static bool first_feed = true;
     msg = *pMsg;
     rcv_stamp = ros::Time::now();
