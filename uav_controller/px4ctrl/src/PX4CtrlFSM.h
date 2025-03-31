@@ -39,9 +39,15 @@ struct SmoothHoverCtrl_t
 	// control xy position if lock_xy_pos is true
 	// neglect xy position error and xy control velocity if lock_xy is false
 	// same as lock_height
-	bool lock_xy_pos{true};
-	bool lock_height{true};
-	bool brake{false}; // enter dead zone and keep 0.5 second
+	enum PosCtrlState 
+	{
+		POS_LOCK = 1,
+		BRAKE,
+		VEL_CTRL
+	};
+	PosCtrlState pos_xy_ctrl_state;
+	PosCtrlState pos_z_ctrl_state;
+
 	Eigen::Vector3d hover_position{0, 0, 0};
 	double yaw;
 	Eigen::Vector2d velocity_xy{0, 0};
@@ -84,7 +90,7 @@ public:
 	quadrotor_msgs::Px4ctrlDebug debug_msg; //debug
 
 	Eigen::Vector4d hover_pose;
-	SmoothHoverCtrl_t smooth_hover_ctrl; 	// for smooth hover ctrl
+	SmoothHoverCtrl_t smooth_hover_ctrl_; 	// for smooth hover ctrl
 	ros::Time last_set_hover_pose_time;
 
 

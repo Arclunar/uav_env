@@ -357,7 +357,16 @@ void PX4CtrlFSM::process()
 			}
 			state = AUTO_HOVER;
 			set_hov_with_odom();
-			des = get_hover_des();
+			if(param.use_smooth_hover_ctrl)
+			{
+				set_hov_with_rc_smooth();
+				des = get_hover_des_smooth();
+			}
+			else
+			{
+				set_hov_with_rc();
+				des = get_hover_des();
+			}			
 			ROS_INFO("[px4ctrl] From CMD_CTRL(L3) to AUTO_HOVER(L2)!");
 		}
 		else
@@ -472,6 +481,7 @@ void PX4CtrlFSM::process()
 				if(!start_takefoff_flag)
 				{
 					set_start_xy_for_takeoff_land(odom_data); // avoid odom drift during motors speed up
+					takeoff_land.start_pose.z() += 0.1; // fast lift up
 					start_takefoff_flag = true;
 				}
 				des = get_takeoff_land_des(param.takeoff_land.speed);
@@ -500,7 +510,16 @@ void PX4CtrlFSM::process()
 		{
 			state = AUTO_HOVER;
 			set_hov_with_odom();
-			des = get_hover_des();
+			if(param.use_smooth_hover_ctrl)
+			{
+				set_hov_with_rc_smooth();
+				des = get_hover_des_smooth();
+			}
+			else
+			{
+				set_hov_with_rc();
+				des = get_hover_des();
+			}			
 			toggle_offboard_mode(true); // toggle off offboard after disarm
 			if_enter_land_flag = false;
 			ROS_INFO("\033[32m[px4ctrl] From AUTO_LAND to AUTO_HOVER(L2)!\033[32m");
@@ -580,7 +599,7 @@ void PX4CtrlFSM::process()
 		break;
 	}
 
-
+	// STEP2: solve and update new control commands
 	// flight constraints
 	flight_constraint_ = NO_FLIGHT_CONSTRAINT;
 	if ((state == AUTO_TAKEOFF || state == AUTO_LAND ) && odom_data.p.z() < 0.3)
@@ -594,12 +613,12 @@ void PX4CtrlFSM::process()
 
 	if(state == AUTO_HOVER && param.use_smooth_hover_ctrl)
 	{
-		flight_constraint_.control_xy_pos = smooth_hover_ctrl.lock_xy_pos;
+		flight_constraint_.control_xy_pos = (smooth_hover_ctrl_.pos_xy_ctrl_state == SmoothHoverCtrl_t::POS_LOCK);
+		flight_constraint_.control_height = (smooth_hover_ctrl_.pos_z_ctrl_state == SmoothHoverCtrl_t::POS_LOCK);
 	}
 
 	controller.setFlightConstraints(flight_constraint_);
 
-	// STEP2: solve and update new control commands
 	if (rotor_low_speed_during_land) // used at the start of auto takeoff
 	{
 		motors_idling(imu_data, u);
@@ -772,26 +791,16 @@ Desired_State_t PX4CtrlFSM::get_hover_des()
 Desired_State_t PX4CtrlFSM::get_hover_des_smooth()
 {
 	Desired_State_t des;
-	if(smooth_hover_ctrl.lock_xy_pos)
-	{
-		des.p = smooth_hover_ctrl.hover_position;
-		des.v = Eigen::Vector3d::Zero();
-		des.a = Eigen::Vector3d::Zero();
-		des.j = Eigen::Vector3d::Zero();	
-		des.yaw = smooth_hover_ctrl.yaw;
-		des.yaw_rate = 0.0;
-	}
-	else{
-		des.p = smooth_hover_ctrl.hover_position;
-		des.v = Eigen::Vector3d::Zero();
-		des.v[0] = smooth_hover_ctrl.velocity_xy[0];
-		des.v[1] = smooth_hover_ctrl.velocity_xy[1];
-		// TODO : achieve smooth height control
-		des.a = Eigen::Vector3d::Zero(); 
-		des.j = Eigen::Vector3d::Zero();	
-		des.yaw = smooth_hover_ctrl.yaw;
-		des.yaw_rate = 0.0;
-	}
+
+	des.p = smooth_hover_ctrl_.hover_position;
+	des.v.head<2>() = smooth_hover_ctrl_.velocity_xy;
+	des.v.z() = smooth_hover_ctrl_.velocity_z;
+	des.a = Eigen::Vector3d::Zero();
+	des.j = Eigen::Vector3d::Zero();	
+	des.yaw = smooth_hover_ctrl_.yaw;
+	des.yaw_rate = 0.0;
+
+	// TODO : achieve smooth height control
 	return des;
 }
 
@@ -855,9 +864,10 @@ void PX4CtrlFSM::set_hov_with_odom()
 
 	last_set_hover_pose_time = ros::Time::now();
 
-	smooth_hover_ctrl.hover_position = odom_data.p;
-	smooth_hover_ctrl.yaw = get_yaw_from_quaternion(odom_data.q);
-	smooth_hover_ctrl.lock_xy_pos = true;
+	smooth_hover_ctrl_.hover_position = odom_data.p;
+	smooth_hover_ctrl_.yaw = get_yaw_from_quaternion(odom_data.q);
+	smooth_hover_ctrl_.pos_xy_ctrl_state = SmoothHoverCtrl_t::POS_LOCK;
+	smooth_hover_ctrl_.pos_z_ctrl_state = SmoothHoverCtrl_t::POS_LOCK;
 }
 
 void PX4CtrlFSM::set_hov_with_rc()
@@ -893,63 +903,89 @@ void PX4CtrlFSM::set_hov_with_rc_smooth()
 	double delta_t = (now - last_set_hover_pose_time).toSec();
 	last_set_hover_pose_time = now;
 	
-	// TODO : remove DEAD_ZONE solvement in RC_Dsata_t::feed and solve it here
-	// mode switch
-	if(smooth_hover_ctrl.lock_xy_pos)
+	// mode switch for xy
+	switch (smooth_hover_ctrl_.pos_xy_ctrl_state)
 	{
-		if(fabs(rc_data.ch[0]) > RC_Data_t::DEAD_ZONE + smooth_hover_ctrl.DEAD_ZONE_HYSTERESIS|| 
-			fabs(rc_data.ch[1]) > RC_Data_t::DEAD_ZONE + smooth_hover_ctrl.DEAD_ZONE_HYSTERESIS)
-		{
-			smooth_hover_ctrl.lock_xy_pos = false;
-		}
-		else
-		{
-			smooth_hover_ctrl.lock_xy_pos = true;
-		}
+		case SmoothHoverCtrl_t::POS_LOCK:
+			if(fabs(rc_data.ch[0]) > RC_Data_t::DEAD_ZONE + smooth_hover_ctrl_.DEAD_ZONE_HYSTERESIS|| 
+				fabs(rc_data.ch[1]) > RC_Data_t::DEAD_ZONE + smooth_hover_ctrl_.DEAD_ZONE_HYSTERESIS)
+				{
+					smooth_hover_ctrl_.pos_xy_ctrl_state = SmoothHoverCtrl_t::VEL_CTRL;
+				}
+			break;
+		case SmoothHoverCtrl_t::BRAKE:
+			// if odom_data.v < 0.1 , jump into POS_LOCK
+			if(odom_data.v.head<2>().norm() < 0.1)
+			{
+				smooth_hover_ctrl_.pos_xy_ctrl_state = SmoothHoverCtrl_t::POS_LOCK;
+				smooth_hover_ctrl_.hover_position.head<2>() = odom_data.p.head<2>();  // can only set once , so must set here
+			}
+			if(fabs(rc_data.ch[0]) > RC_Data_t::DEAD_ZONE + smooth_hover_ctrl_.DEAD_ZONE_HYSTERESIS|| 
+				fabs(rc_data.ch[1]) > RC_Data_t::DEAD_ZONE + smooth_hover_ctrl_.DEAD_ZONE_HYSTERESIS)
+				{
+					smooth_hover_ctrl_.pos_xy_ctrl_state = SmoothHoverCtrl_t::VEL_CTRL;
+				}
+			break;
+		case SmoothHoverCtrl_t::VEL_CTRL:
+			if(fabs(rc_data.ch[0]) < RC_Data_t::DEAD_ZONE &&  fabs (rc_data.ch[1]) < RC_Data_t::DEAD_ZONE)
+			{
+				smooth_hover_ctrl_.pos_xy_ctrl_state = SmoothHoverCtrl_t::BRAKE;
+				smooth_hover_ctrl_.velocity_xy = Eigen::Vector2d::Zero();
+			}
+			break;
+		default :
+			ROS_ERROR("wrong pos xy ctrl state !! ");
+			break;
 	}
-	else{
-		if(fabs(rc_data.ch[0]) < RC_Data_t::DEAD_ZONE &&  fabs (rc_data.ch[1]) < RC_Data_t::DEAD_ZONE)
-		{
-			smooth_hover_ctrl.lock_xy_pos = true;
-			smooth_hover_ctrl.hover_position = odom_data.p;
-			smooth_hover_ctrl.yaw = get_yaw_from_quaternion(odom_data.q);
-		}
-		else
-		{
-			smooth_hover_ctrl.lock_xy_pos = false;
-		}
+	
+	// mode switch for height
+	switch (smooth_hover_ctrl_.pos_z_ctrl_state)
+	{
+		case SmoothHoverCtrl_t::POS_LOCK:
+			if(fabs(rc_data.ch[2]) > RC_Data_t::DEAD_ZONE_THROTTLE + smooth_hover_ctrl_.DEAD_ZONE_HYSTERESIS)				{
+					smooth_hover_ctrl_.pos_z_ctrl_state = SmoothHoverCtrl_t::VEL_CTRL;
+				}
+			break;
+		case SmoothHoverCtrl_t::BRAKE:
+			// if odom_data.v < 0.1 , jump into POS_LOCK
+			if(fabs(odom_data.v.z()) < 0.1)
+			{
+				smooth_hover_ctrl_.pos_z_ctrl_state = SmoothHoverCtrl_t::POS_LOCK;
+				smooth_hover_ctrl_.hover_position.z() = odom_data.p.z();  // can only set once , so must set here
+			}
+			if(fabs(rc_data.ch[2]) > RC_Data_t::DEAD_ZONE_THROTTLE + smooth_hover_ctrl_.DEAD_ZONE_HYSTERESIS)				{
+					smooth_hover_ctrl_.pos_z_ctrl_state = SmoothHoverCtrl_t::VEL_CTRL;
+				}
+			break;
+		case SmoothHoverCtrl_t::VEL_CTRL:
+			if(fabs(rc_data.ch[2]) < RC_Data_t::DEAD_ZONE_THROTTLE)
+			{
+				smooth_hover_ctrl_.pos_z_ctrl_state = SmoothHoverCtrl_t::BRAKE;
+				smooth_hover_ctrl_.velocity_z = 0;
+			}
+			break;
+		default :
+			ROS_ERROR("wrong pos z ctrl state !! ");
+			break;
 	}
-	// TODO : achieve smooth height control
 
-	// we don't need to distinguish if position lock
-	smooth_hover_ctrl.yaw += ((rc_data.ch[3] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[3]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * delta_t * (param.rc_reverse.yaw ? 1 : -1);
-	smooth_hover_ctrl.hover_position.x() += ((rc_data.ch[1] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[1]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * delta_t * (param.rc_reverse.pitch ? 1 : -1);
-	smooth_hover_ctrl.hover_position.y() += ((rc_data.ch[0] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[0]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * delta_t * (param.rc_reverse.roll ? 1 : -1);
-	smooth_hover_ctrl.hover_position.z() += ((rc_data.ch[2] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[2]) - RC_Data_t::DEAD_ZONE_THROTTLE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE_THROTTLE) * param.max_manual_vel * delta_t * (param.rc_reverse.throttle ? 1 : -1);
-	
-	
-	smooth_hover_ctrl.velocity_xy[0] = ((rc_data.ch[1] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[1]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.pitch ? 1 : -1);
-	smooth_hover_ctrl.velocity_xy[1] = ((rc_data.ch[0] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[0]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.roll ? 1 : -1);
+	// yaw controlled all the time 
+	smooth_hover_ctrl_.yaw += ((rc_data.ch[3] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[3]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * delta_t * (param.rc_reverse.yaw ? 1 : -1);
+		
+	if(smooth_hover_ctrl_.pos_xy_ctrl_state == SmoothHoverCtrl_t::VEL_CTRL)
+	{
+		smooth_hover_ctrl_.hover_position.x() += ((rc_data.ch[1] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[1]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * delta_t * (param.rc_reverse.pitch ? 1 : -1);
+		smooth_hover_ctrl_.hover_position.y() += ((rc_data.ch[0] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[0]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * delta_t * (param.rc_reverse.roll ? 1 : -1);	
+		smooth_hover_ctrl_.velocity_xy[0] = ((rc_data.ch[1] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[1]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.pitch ? 1 : -1);
+		smooth_hover_ctrl_.velocity_xy[1] = ((rc_data.ch[0] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[0]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.roll ? 1 : -1);
+	}
 
-	// TODO : achieve continous transform from RC_Data_t::DEAD_ZONE + smooth_hover_ctrl.DEAD_ZONE_HYSTERESIS
-	// NOT tested yet below , maybe cause not stable when control velocity = 0
-	// double effective_dead_zone = RC_Data_t::DEAD_ZONE + smooth_hover_ctrl.DEAD_ZONE_HYSTERESIS;
-	// // x velocity
-	// if (fabs(rc_data.ch[1]) > effective_dead_zone) {
-	// 	smooth_hover_ctrl.velocity_xy[0] = ((rc_data.ch[1] >= 0) ? 1 : -1) * 
-	// 		(fabs(rc_data.ch[1]) - effective_dead_zone) / (1.0 - effective_dead_zone) * 
-	// 		param.max_manual_vel * (param.rc_reverse.pitch ? 1 : -1);
-	// } else {
-	// 	smooth_hover_ctrl.velocity_xy[0] = 0.0; // 在 DEAD_ZONE 和 DEAD_ZONE+HYSTERESIS 之间速度为零
-	// }
-	// // y velocity
-	// if (fabs(rc_data.ch[0]) > effective_dead_zone) {
-	// 	smooth_hover_ctrl.velocity_xy[1] = ((rc_data.ch[0] >= 0) ? 1 : -1) * 
-	// 		(fabs(rc_data.ch[0]) - effective_dead_zone) / (1.0 - effective_dead_zone) * 
-	// 		param.max_manual_vel * (param.rc_reverse.roll ? 1 : -1);
-	// } else {
-	// 	smooth_hover_ctrl.velocity_xy[1] = 0.0; // 在 DEAD_ZONE 和 DEAD_ZONE+HYSTERESIS 之间速度为零
-	// }
+	if(smooth_hover_ctrl_.pos_z_ctrl_state == SmoothHoverCtrl_t::VEL_CTRL)
+	{
+		smooth_hover_ctrl_.hover_position.z() += ((rc_data.ch[2] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[2]) - RC_Data_t::DEAD_ZONE_THROTTLE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE_THROTTLE) * param.max_manual_vel * delta_t * (param.rc_reverse.throttle ? 1 : -1);
+		smooth_hover_ctrl_.velocity_z = ((rc_data.ch[2] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[2]) - RC_Data_t::DEAD_ZONE_THROTTLE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE_THROTTLE) * param.max_manual_vel * (param.rc_reverse.roll ? 1 : -1);
+	}
+
 }
 
 void PX4CtrlFSM::set_start_xy_for_takeoff_land(const Odom_Data_t &odom)

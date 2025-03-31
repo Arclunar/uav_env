@@ -15,7 +15,7 @@ max_angle: 30  # Attitude angle limit in degree. A negative value means no limit
 max_takeoff_land_tilt_angle : 10
 max_takeoff_land_hor_acc : -1
 standard_voltage: 25.2 # 6S battery
-low_voltage: 21.0 # 6S battery
+low_voltage: 19.979 # 6S battery
 use_smooth_hover_ctrl : true
 
 rc_reverse: # *
@@ -28,7 +28,7 @@ auto_takeoff_land:
     enable: true
     enable_auto_arm: true
     no_RC: false
-    takeoff_height: 0.5 # m
+    takeoff_height: 1.5 # m
     takeoff_land_speed: 0.2 # m/s
 
 thrust_model: # The model that maps thrust signal u(0~1) to real thrust force F(Unit:N): F=K1*Voltage^K2*(K3*u^2+(1-K3)*u). 
@@ -44,7 +44,7 @@ thrust_model: # The model that maps thrust signal u(0~1) to real thrust force F(
 
     # linear compensation for initial hover percentage 
     # hover_percentage = hp_in_standard_voltage + ( hp_in_low_voltage - hp_in_standard_voltage ) *  (battery_voltage - standard_voltage) / (low_voltage - standard_voltage)
-    hp_in_standard_voltage : 0.45 # should use hp and voltage in pair in flight
+    hp_in_standard_voltage : 0.4 # should use hp and voltage in pair in flight
     hp_in_low_voltage : 0.5  # nagative number means no voltage compensation
 
 gain: 

@@ -807,7 +807,7 @@ Eigen::Vector3d Controller::computeRealPIDErrorAcc(
 
     // y acceleration
     double y_pos_error = std::isnan(des.p(1)) ? 0.0 : std::max(std::min(des.p(1) - odom.p(1), 1.0), -1.0);
-    y_pos_error= flight_constraint_.control_xy_pos? y_pos_error:0.0;
+    y_pos_error= flight_constraint_.control_xy_pos ? y_pos_error:0.0;
     double y_vel_error = std::max(std::min((des.v(1) + Kp(1) * y_pos_error) - odom.v(1), 1.0), -1.0);
     last_e_v.y() = y_vel_error;
 
@@ -825,6 +825,7 @@ Eigen::Vector3d Controller::computeRealPIDErrorAcc(
 
     // z acceleration
     double z_pos_error = std::isnan(des.p(2)) ? 0.0 : std::max(std::min(des.p(2) - odom.p(2), 1.0), -1.0);
+    z_pos_error= flight_constraint_.control_height ? z_pos_error:0.0;
     double z_vel_error = std::max(std::min((des.v(2) + Kp(2) * z_pos_error) - odom.v(2), 1.0), -1.0);
     last_e_v.z() = z_vel_error;
 

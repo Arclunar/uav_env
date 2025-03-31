@@ -193,7 +193,7 @@ bool RC_Data_t::check_centered()
 {
     bool centered = fabs(ch[0]) < RC_Data_t::DEAD_ZONE 
     && fabs(ch[1]) < RC_Data_t::DEAD_ZONE 
-    && fabs(ch[2]) < RC_Data_t::DEAD_ZONE 
+    && fabs(ch[2]) < RC_Data_t::DEAD_ZONE_THROTTLE 
     && fabs(ch[3]) < RC_Data_t::DEAD_ZONE;
     return centered;
 }
