@@ -8,6 +8,7 @@
 #include <mavros_msgs/AttitudeTarget.h>
 #include <quadrotor_msgs/Px4ctrlDebug.h>
 #include <queue>
+#include "smooth_flight.h"
 
 #include "input.h"
 #include <Eigen/Dense>
@@ -216,12 +217,15 @@ public:
 
 	void resetThrustMapping(void);
 
+	void setFlightConstraints(FlightConstraint_t);
+
 private:
 	static constexpr double kMinNormalizedCollectiveAcc_ = 3;
 	static constexpr double kAlmostZeroValueThreshold_ = 0.001;
 	static constexpr double kAlmostZeroThrustThreshold_ = 0.01;
 	static constexpr double kMaxBodyratesFeedback_ = 4;
 	static constexpr double kMaxAngularAcc_ = 60;
+	FlightConstraint_t flight_constraint_;
 };
 
 #endif

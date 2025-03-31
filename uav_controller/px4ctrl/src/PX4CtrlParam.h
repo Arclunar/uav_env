@@ -31,6 +31,12 @@ public:
 		double bat;
 	};
 
+	struct GlobalFlightConstraint
+	{
+		double max_takeoff_land_tilt_angle;
+		double max_takeoff_land_hor_acc;
+	};
+
 	struct ThrustMapping
 	{
 		bool print_val;
@@ -39,8 +45,8 @@ public:
 		double K3;
 		bool accurate_thrust_model;
 		double hover_percentage;
-		double hover_percentage_base;
-		double hp_per_voltage;
+		double hp_in_standard_voltage;
+		double hp_in_low_voltage;
 		bool noisy_imu;
 		bool hover_percentage_inited = false;
 	};
@@ -68,6 +74,7 @@ public:
 	RCReverse rc_reverse;
 	ThrustMapping thr_map;
 	AutoTakeoffLand takeoff_land;
+	GlobalFlightConstraint global_flight_constraint;
 
 	int pose_solver;
 	double mass;
@@ -82,6 +89,8 @@ public:
 	bool use_position_ctrl;
 	bool use_onboard_landing;
 	bool use_onboard_takeoff;
+	bool use_smooth_hover_ctrl = false;
+
 	// bool print_dbg;
 
 	Parameter_t();

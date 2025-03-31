@@ -16,6 +16,7 @@
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int8.h>
 #include <std_msgs/String.h>
+#include "smooth_flight.h"
 
 
 #include "input.h"
@@ -31,6 +32,23 @@ struct AutoTakeoffLand_t
 	
 	static constexpr double MOTORS_SPEEDUP_TIME = 3.0; // motors idle running for 3 seconds before takeoff
 	static constexpr double DELAY_TRIGGER_TIME = 2.0;  // Time to be delayed when reach at target height
+};
+
+struct SmoothHoverCtrl_t
+{
+	// control xy position if lock_xy_pos is true
+	// neglect xy position error and xy control velocity if lock_xy is false
+	// same as lock_height
+	bool lock_xy_pos{true};
+	bool lock_height{true};
+	bool brake{false}; // enter dead zone and keep 0.5 second
+	Eigen::Vector3d hover_position{0, 0, 0};
+	double yaw;
+	Eigen::Vector2d velocity_xy{0, 0};
+	double velocity_z = 0;
+
+	// rc hysteresis
+	double DEAD_ZONE_HYSTERESIS{0.05};
 };
 
 class PX4CtrlFSM
@@ -66,9 +84,9 @@ public:
 	quadrotor_msgs::Px4ctrlDebug debug_msg; //debug
 
 	Eigen::Vector4d hover_pose;
+	SmoothHoverCtrl_t smooth_hover_ctrl; 	// for smooth hover ctrl
 	ros::Time last_set_hover_pose_time;
 
-	bool hover_percentage_calculated_ = false;
 
 
 	enum State_t
@@ -100,6 +118,7 @@ private:
 
 	// ---- control related ----
 	Desired_State_t get_hover_des();
+	Desired_State_t get_hover_des_smooth();
 	Desired_State_t get_cmd_des();
 
 	// ---- auto takeoff/land ----
@@ -113,6 +132,7 @@ private:
 	// ---- tools ----
 	void set_hov_with_odom();
 	void set_hov_with_rc();
+	void set_hov_with_rc_smooth();
 
 	bool toggle_offboard_mode(bool on_off); // It will only try to toggle once, so not blocked.
 	bool toggle_arm_disarm(bool arm); // It will only try to toggle once, so not blocked.
@@ -123,6 +143,10 @@ private:
 	void publish_trigger(const nav_msgs::Odometry &odom_msg);
 	void publish_position_ctrl(const Controller_Position_t &u, const ros::Time &stamp);
 
+
+	// initial all vaule to -1 means no constraint
+	FlightConstraint_t flight_constraint_;
+	const FlightConstraint_t NO_FLIGHT_CONSTRAINT;
 };
 
 #endif
