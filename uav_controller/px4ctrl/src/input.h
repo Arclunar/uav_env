@@ -55,7 +55,9 @@ public:
   static constexpr double GEAR_SHIFT_VALUE = 0.75;
   static constexpr double API_MODE_THRESHOLD_VALUE = 0.75;
   static constexpr double REBOOT_THRESHOLD_VALUE = 0.5;
-  static constexpr double DEAD_ZONE = 0.25;
+  static constexpr double DEAD_ZONE = 0.1; // origin: 0.25
+  static constexpr double DEAD_ZONE_THROTTLE = 0.25; // specific for throttle
+
 
   RC_Data_t();
   void check_validity();

@@ -34,12 +34,12 @@ void RC_Data_t::feed(mavros_msgs::RCInConstPtr pMsg)
     for (int i = 0; i < 4; i++)
     {
         ch[i] = ((double)msg.channels[i] - 1500.0) / 500.0;
-        if (ch[i] > DEAD_ZONE)
-            ch[i] = (ch[i] - DEAD_ZONE) / (1 - DEAD_ZONE);
-        else if (ch[i] < -DEAD_ZONE)
-            ch[i] = (ch[i] + DEAD_ZONE) / (1 - DEAD_ZONE);
-        else
-            ch[i] = 0.0;
+        // if (ch[i] > DEAD_ZONE)
+        //     ch[i] = (ch[i] - DEAD_ZONE) / (1 - DEAD_ZONE);
+        // else if (ch[i] < -DEAD_ZONE)
+        //     ch[i] = (ch[i] + DEAD_ZONE) / (1 - DEAD_ZONE);
+        // else
+        //     ch[i] = 0.0;
     }
 
     mode = ((double)msg.channels[4] - 1000.0) / 1000.0;  // channel 5 999 1499 1999 -> 0 0.5 1
@@ -191,7 +191,10 @@ void RC_Data_t::check_validity()
 
 bool RC_Data_t::check_centered()
 {
-    bool centered = fabs(ch[0]) < 1e-5 && fabs(ch[1]) < 1e-5 && fabs(ch[2]) < 1e-5 && fabs(ch[3]) < 1e-5;
+    bool centered = fabs(ch[0]) < RC_Data_t::DEAD_ZONE 
+    && fabs(ch[1]) < RC_Data_t::DEAD_ZONE 
+    && fabs(ch[2]) < RC_Data_t::DEAD_ZONE 
+    && fabs(ch[3]) < RC_Data_t::DEAD_ZONE;
     return centered;
 }
 

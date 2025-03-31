@@ -310,8 +310,16 @@ void PX4CtrlFSM::process()
 		}
 		else
 		{
-			set_hov_with_rc();
-			des = get_hover_des();
+			if(param.use_smooth_hover_ctrl)
+			{
+				set_hov_with_rc_smooth();
+				des = get_hover_des_smooth();
+			}
+			else
+			{
+				set_hov_with_rc();
+				des = get_hover_des();
+			}
 			// if ((rc_data.enter_command_mode) ||
 			// 	(takeoff_land.delay_trigger.first && rc_data.is_command_mode))
 			// {
@@ -889,8 +897,8 @@ void PX4CtrlFSM::set_hov_with_rc_smooth()
 	// mode switch
 	if(smooth_hover_ctrl.lock_xy_pos)
 	{
-		if(fabs(rc_data.ch[0]) > RC_Data_t::DEAD_ZONE + RC_Data_t::DEAD_ZONE + smooth_hover_ctrl.DEAD_ZONE_HYSTERESIS|| 
-			fabs(rc_data.ch[1]) > RC_Data_t::DEAD_ZONE + RC_Data_t::DEAD_ZONE + smooth_hover_ctrl.DEAD_ZONE_HYSTERESIS)
+		if(fabs(rc_data.ch[0]) > RC_Data_t::DEAD_ZONE + smooth_hover_ctrl.DEAD_ZONE_HYSTERESIS|| 
+			fabs(rc_data.ch[1]) > RC_Data_t::DEAD_ZONE + smooth_hover_ctrl.DEAD_ZONE_HYSTERESIS)
 		{
 			smooth_hover_ctrl.lock_xy_pos = false;
 		}
@@ -914,13 +922,14 @@ void PX4CtrlFSM::set_hov_with_rc_smooth()
 	// TODO : achieve smooth height control
 
 	// we don't need to distinguish if position lock
-	smooth_hover_ctrl.yaw += rc_data.ch[3] * param.max_manual_vel * delta_t * (param.rc_reverse.yaw ? 1 : -1);
-	smooth_hover_ctrl.hover_position.x() += rc_data.ch[1] * param.max_manual_vel * delta_t * (param.rc_reverse.pitch ? 1 : -1);
-	smooth_hover_ctrl.hover_position.y() += rc_data.ch[0] * param.max_manual_vel * delta_t * (param.rc_reverse.roll ? 1 : -1);
-	smooth_hover_ctrl.hover_position.z() += rc_data.ch[2] * param.max_manual_vel * delta_t * (param.rc_reverse.throttle ? 1 : -1);
+	smooth_hover_ctrl.yaw += ((rc_data.ch[3] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[3]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * delta_t * (param.rc_reverse.yaw ? 1 : -1);
+	smooth_hover_ctrl.hover_position.x() += ((rc_data.ch[1] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[1]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * delta_t * (param.rc_reverse.pitch ? 1 : -1);
+	smooth_hover_ctrl.hover_position.y() += ((rc_data.ch[0] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[0]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * delta_t * (param.rc_reverse.roll ? 1 : -1);
+	smooth_hover_ctrl.hover_position.z() += ((rc_data.ch[2] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[2]) - RC_Data_t::DEAD_ZONE_THROTTLE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE_THROTTLE) * param.max_manual_vel * delta_t * (param.rc_reverse.throttle ? 1 : -1);
 	
-	smooth_hover_ctrl.velocity_xy[0] = ((rc_data.ch[1] >= 0) ? 1 : -1) * fabs(rc_data.ch[1] - RC_Data_t::DEAD_ZONE) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.pitch ? 1 : -1);
-	smooth_hover_ctrl.velocity_xy[1] = ((rc_data.ch[0] >= 0) ? 1 : -1) * fabs(rc_data.ch[0] - RC_Data_t::DEAD_ZONE) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.roll ? 1 : -1);
+	
+	smooth_hover_ctrl.velocity_xy[0] = ((rc_data.ch[1] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[1]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.pitch ? 1 : -1);
+	smooth_hover_ctrl.velocity_xy[1] = ((rc_data.ch[0] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[0]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.roll ? 1 : -1);
 
 	// TODO : achieve continous transform from RC_Data_t::DEAD_ZONE + smooth_hover_ctrl.DEAD_ZONE_HYSTERESIS
 	// NOT tested yet below , maybe cause not stable when control velocity = 0

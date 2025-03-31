@@ -16,7 +16,7 @@ max_takeoff_land_tilt_angle : 10
 max_takeoff_land_hor_acc : 0.1
 standard_voltage: 25.2 # 6S battery
 low_voltage: 20.7 # 6S battery
-use_smooth_hover_ctrl : True
+use_smooth_hover_ctrl : true
 
 rc_reverse: # *
     roll: false
