@@ -12,11 +12,13 @@ use_onboard_landing: false
 use_onboard_takeoff : false
 max_manual_vel: 2.0
 max_angle: 45  # Attitude angle limit in degree. A negative value means no limit.
-max_takeoff_land_tilt_angle : 10
-max_takeoff_land_hor_acc : 0.1
+max_takeoff_land_tilt_angle : -1
+max_takeoff_land_hor_acc : -1
 standard_voltage: 25.2 # 6S battery
 low_voltage: 20.7 # 6S battery
 use_smooth_hover_ctrl : true
+brake_to_lock_v_xy_norm : 0.1
+brake_max_time_s : 1.0 # need to be tuned
 
 rc_reverse: # *
     roll: false
@@ -56,8 +58,8 @@ gain:
     Kv1: 1.5
     Kv2: 1.5
     # by Steven Cheng
-    Kvi0: 0.1
-    Kvi1: 0.1
+    Kvi0: 0.0
+    Kvi1: 0.0
     Kvi2: 0.1 # avoid wrong thrust mapping causing increse height in landing mode :( 
     Kvd0: 0.0
     Kvd1: 0.0

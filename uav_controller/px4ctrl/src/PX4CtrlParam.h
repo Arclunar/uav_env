@@ -90,6 +90,8 @@ public:
 	bool use_onboard_landing;
 	bool use_onboard_takeoff;
 	bool use_smooth_hover_ctrl = false;
+	double brake_to_lock_v_xy_norm = 0.1;
+	double brake_max_time_s = 1.0;
 
 	// bool print_dbg;
 

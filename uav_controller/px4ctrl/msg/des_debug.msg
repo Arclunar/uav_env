@@ -11,3 +11,6 @@ float64 des_a_y
 float64 des_a_z
 
 float64 yaw
+
+bool control_xy_pos
+bool control_height

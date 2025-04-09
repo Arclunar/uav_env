@@ -684,6 +684,9 @@ void PX4CtrlFSM::process()
 	des_msg.des_a_z =  des.a.z();
 
 	des_msg.yaw = des.yaw;
+	des_msg.control_xy_pos = flight_constraint_.control_xy_pos;
+	des_msg.control_height = flight_constraint_.control_height;
+
 
 	des_debug_pub.publish(des_msg);
 
@@ -866,6 +869,9 @@ void PX4CtrlFSM::set_hov_with_odom()
 
 	smooth_hover_ctrl_.hover_position = odom_data.p;
 	smooth_hover_ctrl_.yaw = get_yaw_from_quaternion(odom_data.q);
+	smooth_hover_ctrl_.velocity_xy = Eigen::Vector2d::Zero();
+	smooth_hover_ctrl_.velocity_z = 0;
+
 	smooth_hover_ctrl_.pos_xy_ctrl_state = SmoothHoverCtrl_t::POS_LOCK;
 	smooth_hover_ctrl_.pos_z_ctrl_state = SmoothHoverCtrl_t::POS_LOCK;
 }
@@ -902,6 +908,8 @@ void PX4CtrlFSM::set_hov_with_rc_smooth()
 	ros::Time now = ros::Time::now();
 	double delta_t = (now - last_set_hover_pose_time).toSec();
 	last_set_hover_pose_time = now;
+
+	static ros::Time start_brake_time = ros::Time(0);
 	
 	// mode switch for xy
 	switch (smooth_hover_ctrl_.pos_xy_ctrl_state)
@@ -915,7 +923,7 @@ void PX4CtrlFSM::set_hov_with_rc_smooth()
 			break;
 		case SmoothHoverCtrl_t::BRAKE:
 			// if odom_data.v < 0.1 , jump into POS_LOCK
-			if(odom_data.v.head<2>().norm() < 0.1)
+			if(odom_data.v.head<2>().norm() < param.brake_to_lock_v_xy_norm || (now - start_brake_time ).toSec() > param.brake_max_time_s)
 			{
 				smooth_hover_ctrl_.pos_xy_ctrl_state = SmoothHoverCtrl_t::POS_LOCK;
 				smooth_hover_ctrl_.hover_position.head<2>() = odom_data.p.head<2>();  // can only set once , so must set here
@@ -931,6 +939,7 @@ void PX4CtrlFSM::set_hov_with_rc_smooth()
 			{
 				smooth_hover_ctrl_.pos_xy_ctrl_state = SmoothHoverCtrl_t::BRAKE;
 				smooth_hover_ctrl_.velocity_xy = Eigen::Vector2d::Zero();
+				start_brake_time = now;
 			}
 			break;
 		default :
@@ -979,11 +988,19 @@ void PX4CtrlFSM::set_hov_with_rc_smooth()
 		smooth_hover_ctrl_.velocity_xy[0] = ((rc_data.ch[1] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[1]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.pitch ? 1 : -1);
 		smooth_hover_ctrl_.velocity_xy[1] = ((rc_data.ch[0] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[0]) - RC_Data_t::DEAD_ZONE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE) * param.max_manual_vel * (param.rc_reverse.roll ? 1 : -1);
 	}
+	else
+	{
+		smooth_hover_ctrl_.velocity_xy = Eigen::Vector2d::Zero();
+	}
 
 	if(smooth_hover_ctrl_.pos_z_ctrl_state == SmoothHoverCtrl_t::VEL_CTRL)
 	{
 		smooth_hover_ctrl_.hover_position.z() += ((rc_data.ch[2] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[2]) - RC_Data_t::DEAD_ZONE_THROTTLE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE_THROTTLE) * param.max_manual_vel * delta_t * (param.rc_reverse.throttle ? 1 : -1);
 		smooth_hover_ctrl_.velocity_z = ((rc_data.ch[2] >= 0) ? 1 : -1) * std::max((fabs(rc_data.ch[2]) - RC_Data_t::DEAD_ZONE_THROTTLE),0.0) / (1.0 - RC_Data_t::DEAD_ZONE_THROTTLE) * param.max_manual_vel * (param.rc_reverse.roll ? 1 : -1);
+	}
+	else
+	{
+		smooth_hover_ctrl_.velocity_z = 0;
 	}
 
 }

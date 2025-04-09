@@ -58,6 +58,7 @@ class RosbagRecorder:
             '/debugPx4ctrl',
             '/mavros/setpoint_raw/local',
             '/mavros/setpoint_raw/attitude',
+            '/mavros/rc/in',
             '/mavros/battery',
             '/px4ctrl/des_debug',
             '/px4ctrl/fsm_debug'
@@ -72,7 +73,7 @@ class RosbagRecorder:
         # self.rosbag_directory = os.path.join(workspace_parent_dir, 'rosbag')
 
         # Directory to save the rosbags
-        self.rosbag_directory = os.path.expanduser('~/airdrop_swarm_ws/hires_swarm_ws/rosbag')
+        self.rosbag_directory = os.path.expanduser('~/airdrop_swarm_ws/rosbag')
         if not os.path.exists(self.rosbag_directory):
             os.makedirs(self.rosbag_directory)
 

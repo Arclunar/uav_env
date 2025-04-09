@@ -51,6 +51,8 @@ void Parameter_t::config_from_ros_handle(const ros::NodeHandle &nh)
 	read_essential_param(nh, "max_takeoff_land_tilt_angle", global_flight_constraint.max_takeoff_land_tilt_angle);
 	read_essential_param(nh, "max_takeoff_land_hor_acc", global_flight_constraint.max_takeoff_land_hor_acc);
 	read_essential_param(nh, "use_smooth_hover_ctrl", use_smooth_hover_ctrl);
+	read_essential_param(nh, "brake_to_lock_v_xy_norm", brake_to_lock_v_xy_norm);
+	read_essential_param(nh, "brake_max_time_s", brake_max_time_s);
 
 	read_essential_param(nh, "rc_reverse/roll", rc_reverse.roll);
 	read_essential_param(nh, "rc_reverse/pitch", rc_reverse.pitch);

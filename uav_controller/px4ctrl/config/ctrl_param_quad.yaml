@@ -17,6 +17,8 @@ max_takeoff_land_hor_acc : -1
 standard_voltage: 25.2 # 6S battery
 low_voltage: 19.979 # 6S battery
 use_smooth_hover_ctrl : true
+brake_to_lock_v_xy_norm : 0.1
+brake_max_time_s : 1.0 # need to be tuned
 
 rc_reverse: # *
     roll: false
