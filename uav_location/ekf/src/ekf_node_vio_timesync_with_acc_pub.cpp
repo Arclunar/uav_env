@@ -36,10 +36,19 @@ using namespace Eigen;
    z_measurement is normally in [-pi~pi]
 */
 
-// imu frame is imu body frame
 
 //odom: pose px,py pz orientation qw qx qy qz
 //imu: acc: x y z gyro: wx wy wz
+
+// 20250409 ： Read by Arc
+// TODO : add linear velocity compensate for output
+// TODO : add angular velocity subscribtion，and add it in so-called sys_seq
+// TODO : delete the cam related code , not use it
+// TODO : clean up the code, too chaos
+
+//!  imu frame is imu body frame in FLU frame
+
+
 
 #define TimeSync 0 //time synchronize or not
 #define RePub 0 //re publish the odom when repropagation
@@ -85,10 +94,12 @@ Vector3d q_last;
 Vector3d bg_last;
 Vector3d ba_last;
 
-//Qt imu covariance matrix  smaller believe system(imu) more
+// 刚体质心在imu坐标系下的坐标
 double imu_trans_x = 0.0;
 double imu_trans_y = 0.0;
 double imu_trans_z = 0.0;
+
+//Qt imu covariance matrix  smaller believe system(imu) more
 double gyro_cov = 0.01;
 double acc_cov = 0.01;
 //Rt visual odomtry covariance smaller believe measurement more
@@ -111,13 +122,15 @@ ros::Time last_vio_update_time_ ;
 
 string world_frame_id = "world";
 
-//world frame points velocity
-deque<pair<VectorXd, sensor_msgs::Imu>> sys_seq;
+// imu 队列
+#define seqsize 60
+deque<pair<VectorXd, sensor_msgs::Imu>> sys_seq; // 存储接收到imu数据时的状态和imu测量值，该状态利用imu测量值向前积分一次得到该imu测量时间下的状态
 deque<MatrixXd> cov_seq;
-double dt_0_rp; //the dt for the first frame in repropagation
+double dt_0_rp; // 用来从找到的状态-imu对中，还原到imu测量值对应的状态
+
+// 向状态-imu序列添加当前状态及其对应的imu测量值到最后
 void seq_keep(const sensor_msgs::Imu::ConstPtr &imu_msg)
 {
-    #define seqsize 60
     if(sys_seq.size() < seqsize)
     {
         sys_seq.push_back(make_pair(X_state, *imu_msg));  //X_state before propagation and imu at that time
@@ -132,6 +145,8 @@ void seq_keep(const sensor_msgs::Imu::ConstPtr &imu_msg)
     }
     // ensure that the later frame time > the former one
 }
+
+// 找到和vio odom的时间戳对应的imu测量值，找到后把它之前的imu测量值pop掉，只剩下该时间对应的测量值在第一个
 //choose the coordinate frame imu for the measurement
 bool search_proper_frame(double odom_time)
 {
@@ -145,10 +160,12 @@ bool search_proper_frame(double odom_time)
     bool find_proper_frame = false;
     for(size_t i = 1; i < sys_seq.size(); i++)  // TODO: it better to search from the middle instead in the front
     {
+        // 每次取出前后两个imu测量值的时间戳，计算和当前odom时间的差值
         double time_before = odom_time - sys_seq[i-1].second.header.stamp.toSec();  
         double time_after  = odom_time - sys_seq[i].second.header.stamp.toSec();  
         if((time_before >= 0) && (time_after < 0))
         {
+            // odom时间戳落在了前后两个imu测量值之间，选择更近的一个
             if(abs(time_before) > abs(time_after))
             {
                 rightframe = i;
@@ -160,10 +177,13 @@ bool search_proper_frame(double odom_time)
 
             if(rightframe != 0)
             {
+                // 更新dt为当前imu测量值和前一个imu测量值之间的时间差
                 dt_0_rp = sys_seq[rightframe].second.header.stamp.toSec() - sys_seq[rightframe-1].second.header.stamp.toSec();
             }
             else
-            {// if rightframe is the first frame in the seq, set dt_0_rp as the next dt
+            {   
+                // if rightframe is the first frame in the seq, set dt_0_rp as the next dt
+                // 如果是队列的第一个，没办法取前一个，只能取下一个dt
                 dt_0_rp = sys_seq[rightframe+1].second.header.stamp.toSec() - sys_seq[rightframe].second.header.stamp.toSec();
             }
             
@@ -188,6 +208,7 @@ bool search_proper_frame(double odom_time)
     }
 
     //set the right frame as the first frame in the queue
+    // pop掉找到的imu测量值之前的imu测量值
     for(size_t i = 0; i < rightframe; i++)  
     {
         sys_seq.pop_front();
@@ -203,8 +224,11 @@ bool search_proper_frame(double odom_time)
         return false;
     }
 }
+
+// 从序列的头开始向前传播，传播到结尾得到当前的状态
 void re_propagate()
 {
+    // 从第二个开始取，因为第一个已经用来做update前的状态还原了
     for(size_t i=1; i < sys_seq.size(); i++)
     {
         //re-prediction for the rightframe 
@@ -243,11 +267,12 @@ void re_propagate()
     }
 }
 
+// 接受到一个imu raw测量值
 void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
 {
     // seq_keep(msg);
     // nav_msgs::Odometry odom_fusion;
-    //your code for propagation
+    // your code for propagation
     // std::cout << "imu: (" << msg->linear_acceleration.x << ", " << msg->linear_acceleration.y << ")\n";
     if(!first_frame_tag_odom)
     { //get the initial pose and orientation in the first frame of measurement 
@@ -265,17 +290,20 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
         else
         {
             #if TimeSync
-            seq_keep(msg);//keep before propagation
+            // 将当前状态和该imu测量值添加到队列中，也就是存起来
+            // 所以测量值的时间对应的状态实际上需要imu积分一次后的状态
+            seq_keep(msg);//keep before propagation 
             #endif
 
             time_now = msg->header.stamp.toSec();
             dt = time_now - time_last;
 
+            // 检查当前imu测量值和最新的vio测量值的时间差，并cout出来
             if(odomtag_call)
             {
                 odomtag_call = false;
                 // diff_time = time_now - time_odom_tag_now;
-                // if(diff_time<0)
+                // if(diff_time<0) // 处理这个imu的时候来了个vio odom
                 // {
                 //     cout << "diff time: " << diff_time << endl;  //???!!! exist !!!???
                 //     cout << "timeimu: " << time_now - 1.60889e9 << " time_odom: " << time_odom_tag_now - 1.60889e9 << endl;
@@ -285,18 +313,19 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
             MatrixXd Ft;
             MatrixXd Vt;
 
-            u_gyro(0) = msg->angular_velocity.x;
+            u_gyro(0) = msg->angular_velocity.x; // imu原始角速度
             u_gyro(1) = msg->angular_velocity.y;
             u_gyro(2) = msg->angular_velocity.z;
-            u_acc(0)  = msg->linear_acceleration.x;
+            u_acc(0)  = msg->linear_acceleration.x; // imu原始加速度
             u_acc(1)  = msg->linear_acceleration.y;
             u_acc(2)  = msg->linear_acceleration.z;
 
             q_last = X_state.segment<3>(3);  // last X2
             bg_last = X_state.segment<3>(9);  //last X4
             ba_last = X_state.segment<3>(12);  //last X5
+
+            // 更新协方差
             Ft = MatrixXd::Identity(stateSize, stateSize) + dt*diff_f_diff_x(q_last, u_gyro, u_acc, bg_last, ba_last);
-         
             Vt = dt*diff_f_diff_n(q_last);
 
             //acc_f_pub(u_acc, msg->header.stamp);
@@ -316,6 +345,8 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
             //     test_odomtag_call = false;
             //     system_pub(msg->header.stamp);
             // }
+
+            // 每个imu测量值来了就发布一次
             system_pub(msg->header.stamp);
         }
     }
@@ -327,8 +358,12 @@ Matrix3d Rc_i;
 Vector3d tc_i;  //  cam in imu frame
 int cnt = 0;
 Vector3d INNOVATION_;
-Matrix3d Rr_i;     
-Vector3d tr_i;  //  rigid body in imu frame
+
+//  vio odom in imu frame
+Matrix3d Rr_i;  
+Vector3d tr_i;  
+
+
 //msg is imu in world
 VectorXd get_pose_from_mocap(const geometry_msgs::PoseStamped::ConstPtr &msg) 
 {
@@ -377,7 +412,6 @@ VectorXd get_pose_from_VIOodom(const nav_msgs::Odometry::ConstPtr &msg)
     p_temp(0) = msg->pose.pose.position.x;
     p_temp(1) = msg->pose.pose.position.y;
     p_temp(2) = msg->pose.pose.position.z;
-    //quaternion2euler:  ZYX  roll pitch yaw
     Quaterniond q;
     q.w() = msg->pose.pose.orientation.w;
     q.x() = msg->pose.pose.orientation.x;
@@ -387,11 +421,11 @@ VectorXd get_pose_from_VIOodom(const nav_msgs::Odometry::ConstPtr &msg)
     //Euler transform
     // Ri_w = q.toRotationMatrix();
     // ti_w = p_temp;
-    Rr_w = q.toRotationMatrix();
+    Rr_w = q.toRotationMatrix(); // 这里假定了vio odom的输入是在刚体坐标系下的
     tr_w = p_temp;
     Ri_w = Rr_w * Rr_i.inverse();
     ti_w = tr_w - Ri_w*tr_i;
-    Vector3d euler = mat2euler(Ri_w);
+    Vector3d euler = mat2euler(Ri_w);     //quaternion2euler:  ZYX  roll pitch yaw
 
     VectorXd pose = VectorXd::Random(6);
     pose.segment<3>(0) = ti_w;
@@ -429,6 +463,7 @@ void vioodom_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 
         #if TimeSync
         //call back to the proper time
+        // 找到该vio odom时间戳对应的imu测量值，把它放在队列的最前面
         search_proper_frame(time_odom_tag_now);
         #endif
 
@@ -492,6 +527,7 @@ void vioodom_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
         #else  // time sync
 
         //re-prediction for the rightframe 
+        // 往前进一步，前进一步的状态就是imu测量值对应的状态了，可用来进行update     
         dt = dt_0_rp;
 
         u_gyro(0) = sys_seq[0].second.angular_velocity.x;
@@ -504,7 +540,7 @@ void vioodom_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
         MatrixXd Ft;
         MatrixXd Vt;
 
-        X_state = sys_seq[0].first;
+        X_state = sys_seq[0].first; // 状态取自队列的第一个，也就是该vio odom对应的imu测量值时的状态
         StateCovariance  = cov_seq[0];
 
         q_last = sys_seq[0].first.segment<3>(3);  // last X2
@@ -514,7 +550,7 @@ void vioodom_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
         
         Vt = dt*diff_f_diff_n(q_last);
 
-        X_state += dt*F_model(u_gyro, u_acc);
+        X_state += dt*F_model(u_gyro, u_acc); 
         if(X_state(3) > PI)  X_state(3) -= 2*PI;
         if(X_state(3) < -PI) X_state(3) += 2*PI;
         if(X_state(4) > PI)  X_state(4) -= 2*PI;
@@ -523,6 +559,7 @@ void vioodom_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
         if(X_state(5) < -PI) X_state(5) += 2*PI;
         StateCovariance = Ft*StateCovariance*Ft.transpose() + Vt*Qt*Vt.transpose();
 
+        // 使用vio odom测量值进行update
         //re-update for the rightframe 
         Ct = diff_g_diff_x();
         Wt = diff_g_diff_v();
@@ -541,6 +578,7 @@ void vioodom_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
         if(innovation(5) < -6) innovation(5) += 2*PI;
         INNOVATION_ = innovation_t.segment<3>(3);
 
+        // update
         X_state += Kt_kalmanGain*(innovation);
         if(X_state(3) > PI)  X_state(3) -= 2*PI;
         if(X_state(3) < -PI) X_state(3) += 2*PI;
@@ -552,6 +590,7 @@ void vioodom_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 
         system_pub(sys_seq[0].second.header.stamp);  // choose to publish the repropagation or not
 
+        // 用队列里的imu数据向前积分回到当前时间到状态
         re_propagate();
 
         #endif
@@ -559,6 +598,7 @@ void vioodom_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
     
 }
 
+// ground truth ，used to examine the accuracy of the system
 Quaterniond q_gt, q_gt0;
 bool first_gt = true;
 void gt_callback(const nav_msgs::Odometry::ConstPtr &msg)
@@ -581,6 +621,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "ekf");
     ros::NodeHandle n("~");
     ros::Subscriber s1 = n.subscribe("imu", 1000, imu_callback, ros::TransportHints().tcpNoDelay());
+    // 怪不得叫body odometry，就是假设该odom描述刚体坐标系下，位置代表其质心坐标，速度代表其质心速度
     ros::Subscriber s2 = n.subscribe<geometry_msgs::PoseStamped>("bodyodometry", 40, vioodom_callback, ros::TransportHints().tcpNoDelay());  
     ros::Subscriber s4 = n.subscribe("gt_", 40, gt_callback, ros::TransportHints().tcpNoDelay());
     odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 1000);   //freq = imu freq
@@ -641,11 +682,6 @@ void acc_f_pub(Vector3d acc, ros::Time stamp)
     Accel_filtered.pose.orientation.y = q.y();
     Accel_filtered.pose.orientation.z = q.z();
 
-    // Accel_filtered.pose.orientation.w = q_gt.w();
-    // Accel_filtered.pose.orientation.x = q_gt.x();
-    // Accel_filtered.pose.orientation.y = q_gt.y();
-    // Accel_filtered.pose.orientation.z = q_gt.z();
-
     cout << "q_gt0: " << quaternion2euler(q_gt0) << endl;
     cout << "q_gt: " << quaternion2euler(q_gt) << endl;
     cout << "q_vio: " << mat2euler(q_gt0.toRotationMatrix() * euler2quaternion(X_state.segment<3>(3)).toRotationMatrix()) << endl;
@@ -674,11 +710,16 @@ void system_pub(ros::Time stamp)
     odom_fusion.pose.pose.orientation.x = q.x();
     odom_fusion.pose.pose.orientation.y = q.y();
     odom_fusion.pose.pose.orientation.z = q.z();
+
+    // 线速度仍然是imu的线速度，没有补偿回到质心
     odom_fusion.twist.twist.linear.x = X_state(6);
     odom_fusion.twist.twist.linear.y = X_state(7);
     odom_fusion.twist.twist.linear.z = X_state(8);
 
+    // pos_conter: imu在世界坐标系下的坐标， pos_center2: 质心在世界坐标系下的坐标
     Vector3d pos_center(X_state(0),X_state(1),X_state(2)),pos_center2;
+
+    // 可见这里的imu_trans是刚体质心在imu坐标系下的坐标
     pos_center2 = pos_center + q.toRotationMatrix() * Vector3d(imu_trans_x,imu_trans_y,imu_trans_z);
     odom_fusion.pose.pose.position.x = pos_center2(0);
     odom_fusion.pose.pose.position.y = pos_center2(1);
@@ -706,16 +747,16 @@ void cam_system_pub(ros::Time stamp)
     // odom_fusion.pose.pose.position.x = Z_measurement(0);
     // odom_fusion.pose.pose.position.y = Z_measurement(1);
     // odom_fusion.pose.pose.position.z = Z_measurement(2);
-    odom_fusion.pose.pose.position.x = Z_measurement(0);
+    odom_fusion.pose.pose.position.x = Z_measurement(0); // vio的位置
     odom_fusion.pose.pose.position.y = Z_measurement(1);
     odom_fusion.pose.pose.position.z = Z_measurement(2);
     Quaterniond q;
-    q = euler2quaternion(Z_measurement.segment<3>(3));
+    q = euler2quaternion(Z_measurement.segment<3>(3)); // vio的欧拉角
     odom_fusion.pose.pose.orientation.w = q.w();
     odom_fusion.pose.pose.orientation.x = q.x();
     odom_fusion.pose.pose.orientation.y = q.y();
     odom_fusion.pose.pose.orientation.z = q.z();
-    odom_fusion.twist.twist.linear.x = Z_measurement(3);
+    odom_fusion.twist.twist.linear.x = Z_measurement(3); // vio的线速度
     odom_fusion.twist.twist.linear.y = Z_measurement(4);
     odom_fusion.twist.twist.linear.z = Z_measurement(5);
     
@@ -724,11 +765,9 @@ void cam_system_pub(ros::Time stamp)
     // odom_fusion.twist.twist.angular.z = INNOVATION_(2);
     Vector3d pp, qq, v, bg, ba;
     getState(pp, qq, v, bg, ba);
-    odom_fusion.twist.twist.angular.x = ba(0);
+    odom_fusion.twist.twist.angular.x = ba(0); // kidding me?? seems like just to fill the data, whatever it is
     odom_fusion.twist.twist.angular.y = ba(1);///??????why work??????????//////
     odom_fusion.twist.twist.angular.z = ba(2); 
-    // odom_fusion.twist.twist.angular.x = diff_time;
-    // odom_fusion.twist.twist.angular.y = dt;
     cam_odom_pub.publish(odom_fusion);
 }
 
@@ -744,7 +783,6 @@ void initsys()
     Rc_i = Quaterniond(0, 1, 0, 0).toRotationMatrix();
     // cout << "R_cam" << endl << Rc_i << endl;
     tc_i << 0.05, 0.05, 0; 
-
     
     //  rigid body position in the IMU frame = (0, 0, 0.04)
     // rigid body orientaion in the IMU frame = Quaternion(1, 0, 0, 0); w x y z, respectively
@@ -804,7 +842,7 @@ VectorXd get_filtered_acc(Vector3d acc)
 
     // return (euler2mat(q)*(acc-ba-na));
     // return (q_gt.toRotationMatrix()*(acc-ba-na));  //false
-    return ((acc-ba-na));
+    return ((acc-ba-na)); // 补偿对加速度偏置和加速度噪声的估计
     // return ((acc-na));
     // return (euler2mat(q)*(acc));
 }
