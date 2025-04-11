@@ -28,7 +28,8 @@ catkin_package(
 # add_executable(ekf src/ekf_node_mocap.cpp src/conversion.cpp)  # Euler transform is rigidbody in world transforms to imu in world
 # add_executable(ekf src/ekf_node_vio.cpp src/conversion.cpp) # only use ekf_node_vio.cpp (ekf_node_mocap.cpp is just for mocap format, base on this one)
 # add_executable(ekf src/ekf_node_vio_timesync.cpp src/conversion.cpp)
-add_executable(ekf src/ekf_node_vio_timesync_with_acc_pub.cpp src/conversion.cpp)
+# add_executable(ekf src/ekf_node_vio_timesync_with_acc_pub.cpp src/conversion.cpp)
+add_executable(ekf src/ekf_node_vio_timesync_com_comp.cpp src/conversion.cpp)
 add_executable(imu_add_noise src/imu_add_noise.cpp src/conversion.cpp)
 add_executable(echo_state src/echo_state.cpp )
 target_link_libraries(ekf ${catkin_LIBRARIES} )

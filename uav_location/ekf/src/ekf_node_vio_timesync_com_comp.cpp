@@ -43,6 +43,7 @@ using namespace Eigen;
 // 20250409 ： Read by Arc
 // TODO : add linear velocity compensate for output
 // TODO : add angular velocity subscribtion，and add it in so-called sys_seq
+//! 注意/mavors/imu/data话题的角速度是在imu的body系下的
 // TODO : delete the cam related code , not use it
 // TODO : clean up the code, too chaos
 
@@ -62,6 +63,8 @@ ros::Publisher yaw_rad_pub;
 // no use
 geometry_msgs::Pose pose;
 Vector3d position, orientation, velocity;
+// imu filtered angular velocity
+Vector3d imu_angular_velocity_;
 
 // Now set up the relevant matrices
 //states X [p q pdot]  [px,py,pz, wx,wy,wz, vx,vy,vz]
@@ -617,6 +620,13 @@ void gt_callback(const nav_msgs::Odometry::ConstPtr &msg)
     }
 }
 
+void imu_att_callback(const sensor_msgs::Imu::ConstPtr &msg)
+{
+    imu_angular_velocity_(0) = msg->angular_velocity.x;
+    imu_angular_velocity_(1) = msg->angular_velocity.y;
+    imu_angular_velocity_(2) = msg->angular_velocity.z;
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ekf");
@@ -624,6 +634,7 @@ int main(int argc, char **argv)
     ros::Subscriber imu_raw_sub = n.subscribe("imu", 1000, imu_raw_callback, ros::TransportHints().tcpNoDelay());
     // 怪不得叫body odometry，就是假设该odom描述刚体坐标系下，位置代表其质心坐标，速度代表其质心速度
     ros::Subscriber body_odom_sub = n.subscribe<geometry_msgs::PoseStamped>("bodyodometry", 40, vioodom_callback, ros::TransportHints().tcpNoDelay());  
+    ros::Subscriber imu_att_sub = n.subscribe("/mavros/imu/data", 1000, imu_att_callback, ros::TransportHints().tcpNoDelay());
 
     // ground truth
     ros::Subscriber s4 = n.subscribe("gt_", 40, gt_callback, ros::TransportHints().tcpNoDelay()); 
@@ -631,6 +642,7 @@ int main(int argc, char **argv)
     yaw_rad_pub = n.advertise<std_msgs::Float64>("yaw_rad", 4); //pub_yaw_radius value
     cam_odom_pub = n.advertise<nav_msgs::Odometry>("cam_ekf_odom", 1000);
     acc_filtered_pub = n.advertise<geometry_msgs::PoseStamped>("acc_filtered", 1000);
+    
     
     n.getParam("gyro_cov", gyro_cov);
     n.getParam("acc_cov", acc_cov);
@@ -706,7 +718,7 @@ void system_pub(ros::Time stamp)
     odom_fusion.header.frame_id = "world";
     // odom_fusion.header.frame_id = "imu";
     
-
+    // attitude
     Quaterniond q;
     q = euler2quaternion(X_state.segment<3>(3));
     odom_fusion.pose.pose.orientation.w = q.w();
@@ -714,19 +726,31 @@ void system_pub(ros::Time stamp)
     odom_fusion.pose.pose.orientation.y = q.y();
     odom_fusion.pose.pose.orientation.z = q.z();
 
-    //! 线速度仍然是imu的线速度，没有补偿回到质心
-    odom_fusion.twist.twist.linear.x = X_state(6);
-    odom_fusion.twist.twist.linear.y = X_state(7);
-    odom_fusion.twist.twist.linear.z = X_state(8);
+    // body linear velocity
+    Vector3d imu_vel_in_world = X_state.segment<3>(6); // we get the imu velocity in world frame
 
+    // 假定imu的角速度和刚体的角速度是相同的，假定imu_angular_velocity_的角速度是当前的角速度
+    // 已知imu处的线速度，imu的角速度以及质心到imu的坐标Vector3d(-imu_trans_x,-imu_trans_y,-imu_trans_z)
+    // imu相对于质心的线速度 等于 imu_angular_velocity_ 叉乘 Vector3d(-imu_trans_x,-imu_trans_y,-imu_trans_z)
+    Vector3d imu_pos_rel_body_in_body =  Vector3d(-imu_trans_x,-imu_trans_y,-imu_trans_z);
+    Vector3d imu_vel_rel_body_in_body =  imu_angular_velocity_.cross(imu_pos_rel_body_in_body);
+    // transform this offset to world frame
+    Vector3d imu_vel_rel_body_in_world = q.toRotationMatrix().transpose() * imu_vel_rel_body_in_body;
+    // 质心的线速度 = imu的线速度 + 刚体相对于imu的线速度 = imu的线速度 - imu相对于刚体的线速度
+    // velocity of the center of mass in world frame = velocity of imu in world frame - velocity of imu in body frame
+    Vector3d body_vel_in_world = imu_vel_in_world - imu_vel_rel_body_in_world;
+    odom_fusion.twist.twist.linear.x = body_vel_in_world(0);
+    odom_fusion.twist.twist.linear.y = body_vel_in_world(1);
+    odom_fusion.twist.twist.linear.z = body_vel_in_world(2);
+
+    // body position
     // pos_conter: imu在世界坐标系下的坐标， pos_center2: 质心在世界坐标系下的坐标
-    Vector3d pos_center(X_state(0),X_state(1),X_state(2)),pos_center2;
+    Vector3d imu_pos(X_state(0),X_state(1),X_state(2)),body_pos;
 
-    // 可见这里的imu_trans是刚体质心在imu坐标系下的坐标
-    pos_center2 = pos_center + q.toRotationMatrix() * Vector3d(imu_trans_x,imu_trans_y,imu_trans_z);
-    odom_fusion.pose.pose.position.x = pos_center2(0);
-    odom_fusion.pose.pose.position.y = pos_center2(1);
-    odom_fusion.pose.pose.position.z = pos_center2(2);
+    body_pos = imu_pos + q.toRotationMatrix() * Vector3d(imu_trans_x,imu_trans_y,imu_trans_z);
+    odom_fusion.pose.pose.position.x = body_pos(0);
+    odom_fusion.pose.pose.position.y = body_pos(1);
+    odom_fusion.pose.pose.position.z = body_pos(2);
 
     // std::cout << "odom: (" << pos_center2(0) << ", " << pos_center2(1) << ")\n";
 
