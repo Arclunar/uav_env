@@ -17,6 +17,7 @@
 #include <std_msgs/Int8.h>
 #include <std_msgs/String.h>
 #include "smooth_flight.h"
+#include <quadrotor_msgs/SimpleOdom.h>
 
 
 #include "input.h"

@@ -61,7 +61,7 @@ void PX4CtrlFSM::process()
 			param.thr_map.hover_percentage = 0.0;
 			param.thr_map.hover_percentage_inited = false ;
 		}
-		if(param.thr_map.hover_percentage > 0.7)
+		if(param.thr_map.hover_percentage > 0.8)
 		{
 			ROS_ERROR_THROTTLE(2.0,"[px4ctrl] Hover percentage is larger than 0.7! Please check the battery voltage and the hover percentage parameters.");
 			param.thr_map.hover_percentage = 0.7;
@@ -83,7 +83,7 @@ void PX4CtrlFSM::process()
 
 
 	ros::Time now_time = ros::Time::now();
-	Controller_Output_t u;
+	static Controller_Output_t u;
 	Controller_Position_t u_pos;
 	Desired_State_t des(odom_data);
 	bool rotor_low_speed_during_land = false;
@@ -125,6 +125,7 @@ void PX4CtrlFSM::process()
 
 	// STEP1: state machine runs
 	px4ctrl::fsm_debug fsm_msg;
+	fsm_msg.landed = get_landed();
 	fsm_msg.state = state;
 	state_debug_pub.publish(fsm_msg);
 
@@ -154,14 +155,24 @@ void PX4CtrlFSM::process()
 				ROS_ERROR("[px4ctrl] Reject AUTO_HOVER(L2). Hover percentage is not inited!");
 				break;
 			}
-
-
-			state = AUTO_HOVER;
+			// need send offboard attitude cmd before toggle offboard mode
+			publish_attitude_ctrl(u,now_time);
+			for (int i = 0; i < 10 && ros::ok(); ++i) // wait for 0.1 seconds to allow mode change by FMU
+			{
+				ros::Duration(0.01).sleep();
+				ros::spinOnce();
+			}
 			controller.resetThrustMapping();
 			set_hov_with_odom();
-			toggle_offboard_mode(true);
-
-			ROS_INFO("\033[32m[px4ctrl] MANUAL_CTRL(L1) --> AUTO_HOVER(L2)\033[32m");
+			if(!toggle_offboard_mode(true))				  // back to manual mode
+			{
+				state = MANUAL_CTRL;
+				ROS_INFO("[px4ctrl] enter offboard failed, still in MANUAL");
+			}
+			else{
+				state = AUTO_HOVER;
+				ROS_INFO("\033[32m[px4ctrl] MANUAL_CTRL(L1) --> AUTO_HOVER(L2)\033[32m");
+			}
 		}
 		else if (param.takeoff_land.enable 
 		&& ((takeoff_land_data.triggered && takeoff_land_data.takeoff_land_cmd == quadrotor_msgs::TakeoffLand::TAKEOFF) || rc_data.toggle_takeoff) ) // Try to jump to AUTO_TAKEOFF
@@ -481,7 +492,7 @@ void PX4CtrlFSM::process()
 				if(!start_takefoff_flag)
 				{
 					set_start_xy_for_takeoff_land(odom_data); // avoid odom drift during motors speed up
-					takeoff_land.start_pose.z() += 0.1; // fast lift up
+					takeoff_land.start_pose.z() += 0.3; // fast lift up
 					start_takefoff_flag = true;
 				}
 				des = get_takeoff_land_des(param.takeoff_land.speed);
@@ -520,7 +531,7 @@ void PX4CtrlFSM::process()
 				set_hov_with_rc();
 				des = get_hover_des();
 			}			
-			toggle_offboard_mode(true); // toggle off offboard after disarm
+			toggle_offboard_mode(true);
 			if_enter_land_flag = false;
 			ROS_INFO("\033[32m[px4ctrl] From AUTO_LAND to AUTO_HOVER(L2)!\033[32m");
 		}
@@ -745,6 +756,12 @@ void PX4CtrlFSM::land_detector(const State_t state, const Desired_State_t &des, 
 		return; // No need of other decisions
 	}
 
+	// from land to hover need to set landed to false
+	if (state == State_t::AUTO_HOVER && takeoff_land.landed)
+	{
+		takeoff_land.landed = false;
+		return;
+	}
 
 	// land_detector parameters
 	constexpr double POSITION_DEVIATION_C = -0.5; // Constraint 1: target position below real position for POSITION_DEVIATION_C meters.

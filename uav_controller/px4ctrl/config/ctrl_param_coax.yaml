@@ -54,12 +54,12 @@ gain:
     Kp0: 1.5
     Kp1: 1.5
     Kp2: 1.5
-    Kv0: 1.5
-    Kv1: 1.5
+    Kv0: 2.5
+    Kv1: 2.5
     Kv2: 1.5
     # by Steven Cheng
-    Kvi0: 0.0
-    Kvi1: 0.0
+    Kvi0: 0.05
+    Kvi1: 0.05
     Kvi2: 0.1 # avoid wrong thrust mapping causing increse height in landing mode :( 
     Kvd0: 0.0
     Kvd1: 0.0

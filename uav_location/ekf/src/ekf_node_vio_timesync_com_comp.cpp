@@ -13,6 +13,11 @@
 // #include <geometry_msgs/Accel.h>
 #include "conversion.h"
 #include <std_msgs/Float64.h>
+#include "lowpass_filter.hpp"
+#include <chrono>
+#include <std_msgs/Int32.h>
+#include <quadrotor_msgs/SimpleOdom.h>
+
 
 using namespace std;
 using namespace Eigen;
@@ -58,6 +63,9 @@ ros::Publisher odom_pub;
 ros::Publisher cam_odom_pub;
 ros::Publisher acc_filtered_pub;
 ros::Publisher yaw_rad_pub;
+ros::Publisher odom_filtered_pub;
+ros::Publisher test_freq_pub;
+ros::Publisher simple_odom_pub;
 
 //state
 // no use
@@ -131,6 +139,12 @@ string world_frame_id = "world";
 deque<pair<VectorXd, sensor_msgs::Imu>> sys_seq; // 存储接收到imu数据时的状态和imu测量值，该状态利用imu测量值向前积分一次得到该imu测量时间下的状态
 deque<MatrixXd> cov_seq;
 double dt_0_rp; // 用来从找到的状态-imu对中，还原到imu测量值对应的状态
+
+// 低通滤波器，平滑输出速度
+LowPassFilter2ndOrder lpf_vel_x_(30.0);
+LowPassFilter2ndOrder lpf_vel_y_(30.0);
+LowPassFilter2ndOrder lpf_vel_z_(30.0);
+
 
 // 向状态-imu序列添加当前状态及其对应的imu测量值到最后
 void seq_keep(const sensor_msgs::Imu::ConstPtr &imu_msg)
@@ -332,7 +346,7 @@ void imu_raw_callback(const sensor_msgs::Imu::ConstPtr &msg)
             Ft = MatrixXd::Identity(stateSize, stateSize) + dt*diff_f_diff_x(q_last, u_gyro, u_acc, bg_last, ba_last);
             Vt = dt*diff_f_diff_n(q_last);
 
-            //acc_f_pub(u_acc, msg->header.stamp);
+            acc_f_pub(u_acc, msg->header.stamp);
             X_state += dt*F_model(u_gyro, u_acc);
             if(X_state(3) > PI)  X_state(3) -= 2*PI;
             if(X_state(3) < -PI) X_state(3) += 2*PI;
@@ -352,6 +366,7 @@ void imu_raw_callback(const sensor_msgs::Imu::ConstPtr &msg)
 
             // 每个imu测量值来了就发布一次ekf输出
             system_pub(msg->header.stamp);
+
         }
     }
   
@@ -627,6 +642,14 @@ void imu_att_callback(const sensor_msgs::Imu::ConstPtr &msg)
     imu_angular_velocity_(2) = msg->angular_velocity.z;
 }
 
+void timerCallback(const ros::TimerEvent &event)
+{
+    nav_msgs::Odometry test_freq;
+    test_freq.header.stamp = ros::Time(0);
+    test_freq.header.frame_id = "world";
+    test_freq_pub.publish(test_freq);
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ekf");
@@ -638,11 +661,16 @@ int main(int argc, char **argv)
 
     // ground truth
     ros::Subscriber s4 = n.subscribe("gt_", 40, gt_callback, ros::TransportHints().tcpNoDelay()); 
-    odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 1000);   //freq = imu freq
+    odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 100);   //freq = imu freq
     yaw_rad_pub = n.advertise<std_msgs::Float64>("yaw_rad", 4); //pub_yaw_radius value
-    cam_odom_pub = n.advertise<nav_msgs::Odometry>("cam_ekf_odom", 1000);
-    acc_filtered_pub = n.advertise<geometry_msgs::PoseStamped>("acc_filtered", 1000);
+    cam_odom_pub = n.advertise<nav_msgs::Odometry>("cam_ekf_odom", 100);
+    acc_filtered_pub = n.advertise<geometry_msgs::PoseStamped>("acc_filtered", 10);
+    odom_filtered_pub = n.advertise<nav_msgs::Odometry>("ekf_odom_filtered", 100); 
+    test_freq_pub = n.advertise<nav_msgs::Odometry>("test_freq", 100);
+    simple_odom_pub = n.advertise<quadrotor_msgs::SimpleOdom>("simple_odom", 100);
     
+
+    ros::Timer timer = n.createTimer(ros::Duration(0.005), timerCallback);
     
     n.getParam("gyro_cov", gyro_cov);
     n.getParam("acc_cov", acc_cov);
@@ -675,7 +703,18 @@ int main(int argc, char **argv)
 
     last_vio_update_time_ = ros::Time(0);
 
-    ros::spin();
+    // 2. 创建 AsyncSpinner（8个线程）
+    ros::AsyncSpinner spinner(8);  // 使用 8 个线程处理回调
+    spinner.start();  // 启动异步 spinner
+    
+    // 保持节点运行
+    ros::Rate rate(1000);  // 设置循环频率为 1000Hz
+    while (ros::ok())
+    {
+        rate.sleep();  // 等待下一个循环
+    }
+
+    return 0;
 }
 
 void acc_f_pub(Vector3d acc, ros::Time stamp)
@@ -697,20 +736,23 @@ void acc_f_pub(Vector3d acc, ros::Time stamp)
     Accel_filtered.pose.orientation.y = q.y();
     Accel_filtered.pose.orientation.z = q.z();
 
-    cout << "q_gt0: " << quaternion2euler(q_gt0) << endl;
-    cout << "q_gt: " << quaternion2euler(q_gt) << endl;
-    cout << "q_vio: " << mat2euler(q_gt0.toRotationMatrix() * euler2quaternion(X_state.segment<3>(3)).toRotationMatrix()) << endl;
-    cout << "q_gt0*vio != q_gt: " << quaternion2euler(q_gt0 * q) << endl;   
+    // cout << "q_gt0: " << quaternion2euler(q_gt0) << endl;
+    // cout << "q_gt: " << quaternion2euler(q_gt) << endl;
+    // cout << "q_vio: " << mat2euler(q_gt0.toRotationMatrix() * euler2quaternion(X_state.segment<3>(3)).toRotationMatrix()) << endl;
+    // cout << "q_gt0*vio != q_gt: " << quaternion2euler(q_gt0 * q) << endl;   
     // cout << "q_gt0*vio*q_gt0^-1 = q_gt: " << quaternion2euler(q_gt0 * q * q_gt0.inverse()) << endl;   //q1*euler2quaternion(V)*q1.inverse()  = q1.toRotationMatrix() * V  TODO why?
 
     acc_filtered_pub.publish(Accel_filtered);
 }
 void system_pub(ros::Time stamp)
 {
+    // auto tic_begin_timer = std::chrono::steady_clock::now();
+
     if ((ros::Time::now() - last_vio_update_time_).toSec() > 0.1) {
         ROS_ERROR_THROTTLE(1.0,"vio/gps message timeout. Stopping ekf_odom publishing.");
         return;
     }
+
     nav_msgs::Odometry odom_fusion;
     odom_fusion.header.stamp = stamp;
     // odom_fusion.header.frame_id = world_frame_id;
@@ -735,10 +777,11 @@ void system_pub(ros::Time stamp)
     Vector3d imu_pos_rel_body_in_body =  Vector3d(-imu_trans_x,-imu_trans_y,-imu_trans_z);
     Vector3d imu_vel_rel_body_in_body =  imu_angular_velocity_.cross(imu_pos_rel_body_in_body);
     // transform this offset to world frame
-    Vector3d imu_vel_rel_body_in_world = q.toRotationMatrix().transpose() * imu_vel_rel_body_in_body;
+    Vector3d imu_vel_rel_body_in_world = q.toRotationMatrix() * imu_vel_rel_body_in_body;
     // 质心的线速度 = imu的线速度 + 刚体相对于imu的线速度 = imu的线速度 - imu相对于刚体的线速度
     // velocity of the center of mass in world frame = velocity of imu in world frame - velocity of imu in body frame
     Vector3d body_vel_in_world = imu_vel_in_world - imu_vel_rel_body_in_world;
+
     odom_fusion.twist.twist.linear.x = body_vel_in_world(0);
     odom_fusion.twist.twist.linear.y = body_vel_in_world(1);
     odom_fusion.twist.twist.linear.z = body_vel_in_world(2);
@@ -754,7 +797,50 @@ void system_pub(ros::Time stamp)
 
     // std::cout << "odom: (" << pos_center2(0) << ", " << pos_center2(1) << ")\n";
 
+
+    // static ros::Time last_pub_time = ros::Time(0);
+    // ros::Time now_time = ros::Time::now();
+    // double pub_dt = (now_time - last_pub_time).toSec();
+    // last_pub_time = now_time;
+    // std::cout << "pub_dt: " << pub_dt << std::endl;
     odom_pub.publish(odom_fusion);
+
+
+    // lpf
+    static ros::Time last_stamp = ros::Time(0);
+    double dt = last_stamp.isZero() ? 0.01 : (stamp - last_stamp).toSec();
+
+    // limit dt to 100 to 300 hz , warn when exceed
+    if(dt > 0.01)
+    {
+        ROS_WARN_THROTTLE(1.0,"dt is too large: %f", dt);
+        dt = 0.01;
+    }
+    if(dt < 0.003)
+    {
+        ROS_WARN_THROTTLE(1.0,"dt is too small: %f", dt);
+        dt = 0.003;
+    }
+
+    last_stamp = stamp;
+    double body_vel_x_filtered = lpf_vel_x_.update(body_vel_in_world.x(),dt);
+    double body_vel_y_filtered = lpf_vel_y_.update(body_vel_in_world.y(),dt);
+    double body_vel_z_filtered = lpf_vel_z_.update(body_vel_in_world.z(),dt);
+
+    odom_fusion.twist.twist.linear.x = body_vel_x_filtered;
+    odom_fusion.twist.twist.linear.y = body_vel_y_filtered;
+    odom_fusion.twist.twist.linear.z = body_vel_z_filtered;
+
+    odom_filtered_pub.publish(odom_fusion);
+
+    quadrotor_msgs::SimpleOdom simple_odom;
+    simple_odom.header.stamp = stamp;
+    simple_odom.header.frame_id = "world";
+    simple_odom.pose = odom_fusion.pose.pose;
+    simple_odom.twist = odom_fusion.twist.twist;
+    simple_odom_pub.publish(simple_odom);
+
+
 
     std_msgs::Float64 yaw_rad;
     double qua_w = 1.0, qua_x = 0.0, qua_y = 0.0, qua_z = 0.0;
@@ -763,7 +849,10 @@ void system_pub(ros::Time stamp)
     qua_y = q.y();
     qua_z = q.z();
     yaw_rad.data = atan2(2*(qua_w*qua_z+qua_x*qua_y),1-2*(qua_y*qua_y+qua_z*qua_z));
-    yaw_rad_pub.publish(yaw_rad);
+    // yaw_rad_pub.publish(yaw_rad);
+
+    // auto toc_now = std::chrono::steady_clock::now();
+    // std::cout << "till now costs in timer: " << (toc_now - tic_begin_timer).count() << "nanoseconds" << std::endl;
 }
 void cam_system_pub(ros::Time stamp)
 {
@@ -795,7 +884,7 @@ void cam_system_pub(ros::Time stamp)
     odom_fusion.twist.twist.angular.x = ba(0); // kidding me?? seems like just to fill the data, whatever it is
     odom_fusion.twist.twist.angular.y = ba(1);///??????why work??????????//////
     odom_fusion.twist.twist.angular.z = ba(2); 
-    cam_odom_pub.publish(odom_fusion);
+    // cam_odom_pub.publish(odom_fusion);
 }
 
 //process model

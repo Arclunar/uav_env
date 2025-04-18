@@ -78,6 +78,7 @@ add_message_files(
   Px4ctrlDebug.msg
   TakeoffLand.msg
   TakeOffLandToBridge.msg
+  SimpleOdom.msg
 )
 
 generate_messages(

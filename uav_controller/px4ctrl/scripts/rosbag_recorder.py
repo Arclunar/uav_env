@@ -50,15 +50,24 @@ class RosbagRecorder:
             'drone_{0}_planning/pos_yaw_cmd'.format(self.drone_id),
             'drone_{0}_track_manager/new_target_id'.format(self.drone_id),
             '/drone_{0}_object_odom_to_planner'.format(self.drone_id),
+            '/vrpn_client_node/coax0{0}/pose'.format(self.drone_id),
+            '/vrpn_client_node/coax0{0}/twist'.format(self.drone_id),
             '/others_odom',
             '/micolink_tof',
             '/pose_height_fusion',
             '/mavros/imu/data',
+            '/mavros/imu/data_raw',
             '/ekf/ekf_odom_corrected',
+            '/ekf/ekf_odom',
+            '/ekf/ekf_odom_filtered',
+            '/ekf/acc_filtered',
+            '/ekf/test_freq',
+            '/px4ctrlcoax/test_freq',
             '/debugPx4ctrl',
             '/mavros/setpoint_raw/local',
             '/mavros/setpoint_raw/attitude',
             '/mavros/rc/in',
+            '/mavros/state',
             '/mavros/battery',
             '/px4ctrl/des_debug',
             '/px4ctrl/fsm_debug'
@@ -73,7 +82,7 @@ class RosbagRecorder:
         # self.rosbag_directory = os.path.join(workspace_parent_dir, 'rosbag')
 
         # Directory to save the rosbags
-        self.rosbag_directory = os.path.expanduser('~/airdrop_swarm_ws/rosbag')
+        self.rosbag_directory = os.path.expanduser('~/airdrop_swarm_ws/713workspace/rosbag')
         if not os.path.exists(self.rosbag_directory):
             os.makedirs(self.rosbag_directory)
 

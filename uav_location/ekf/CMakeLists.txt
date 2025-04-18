@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
     nav_msgs
     geometry_msgs
     sensor_msgs
+    quadrotor_msgs
     )
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)

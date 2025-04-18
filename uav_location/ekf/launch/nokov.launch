@@ -17,12 +17,11 @@
         <!-- parms -->
         <rosparam file="$(find ekf)/launch/PX4_vio_drone.yaml" command="load" />
 
-        <!--body
-        in IMU frame-->
+        <!--body origin ( center of mass ) in IMU frame , for sending to controller-->
         <param name="imu_trans_x" type="double" value="0.0" />
         <param name="imu_trans_y" type="double" value="0.0" />
         <!-- <param name="imu_trans_z" type="double" value="-0.10"/>  -->
-        <param name="imu_trans_z" type="double" value="0.0" />
+        <param name="imu_trans_z" type="double" value="0.14" />
 
         <!-- Qt -->
         <param name="gyro_cov" type="double" value="0.02" />

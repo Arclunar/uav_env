@@ -8,10 +8,29 @@ void mySigintHandler(int sig)
     ros::shutdown();
 }
 
+ros::Publisher test_freq_pub;
+void timerCallback(const ros::TimerEvent &event)
+{
+    nav_msgs::Odometry test_freq;
+    test_freq.header.stamp = ros::Time(0);
+    test_freq.header.frame_id = "world";
+
+    static int count = 0;
+    test_freq.twist.twist.linear.x = (count++) % 20;
+    test_freq_pub.publish(test_freq);
+}
+
+
 int main(int argc, char *argv[])
 {
     ros::init(argc, argv, "px4ctrl");
     ros::NodeHandle nh("~");
+
+    ros::Timer timer = nh.createTimer(ros::Duration(0.005), timerCallback);
+    test_freq_pub = nh.advertise<nav_msgs::Odometry>("test_freq", 1);
+
+
+    
 
     signal(SIGINT, mySigintHandler);
     ros::Duration(1.0).sleep();

@@ -13,6 +13,8 @@
 #include <sensor_msgs/BatteryState.h>
 #include <uav_utils/utils.h>
 #include "PX4CtrlParam.h"
+#include <quadrotor_msgs/SimpleOdom.h>
+
 
 class RC_Data_t
 {

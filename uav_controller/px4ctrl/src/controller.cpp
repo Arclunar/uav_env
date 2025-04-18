@@ -122,55 +122,55 @@ Eigen::Vector3d Controller::computeLimitedTotalAccFromThrustForce(
   }
 
   // Limit angle
-  // if (param.max_angle > 0)
-  // {
-  //   double z_acc = total_acc.dot(Eigen::Vector3d::UnitZ());
-  //   Eigen::Vector3d z_B = total_acc.normalized();
-  //   if (z_acc < kMinNormalizedCollectiveAcc_)
-  //   {
-  //     z_acc = kMinNormalizedCollectiveAcc_; // Not allow too small z-force when angle limit is enabled.
-  //   }
-  //   Eigen::Vector3d rot_axis = Eigen::Vector3d::UnitZ().cross(z_B).normalized();
-  //   double rot_ang = std::acos(Eigen::Vector3d::UnitZ().dot(z_B) / (1 * 1));
-  //   if (rot_ang > param.max_angle) // Exceed the angle limit
-  //   {
-  //     Eigen::Vector3d limited_z_B = Eigen::AngleAxisd(param.max_angle, rot_axis) * Eigen::Vector3d::UnitZ();
-  //     total_acc = z_acc / std::cos(param.max_angle) * limited_z_B;
-  //   }
-  // }
-
-  // limit acc in x-y plane, set max x-y acc , z component unchanged
-  if(flight_constraint_.max_acc_xy > 0 )
+  if (param.max_angle > 0)
   {
-    double xy_acc = (total_acc - total_acc.dot(Eigen::Vector3d::UnitZ()) * Eigen::Vector3d::UnitZ()).norm();
-    if (xy_acc > flight_constraint_.max_acc_xy)
+    double z_acc = total_acc.dot(Eigen::Vector3d::UnitZ());
+    Eigen::Vector3d z_B = total_acc.normalized();
+    if (z_acc < kMinNormalizedCollectiveAcc_)
     {
-        // extract x-y component
-        Eigen::Vector3d xy_acc_vec = total_acc - total_acc.dot(Eigen::Vector3d::UnitZ()) * Eigen::Vector3d::UnitZ();
-        xy_acc_vec = xy_acc_vec.normalized() * flight_constraint_.max_acc_xy;
-        total_acc = xy_acc_vec + total_acc.dot(Eigen::Vector3d::UnitZ()) * Eigen::Vector3d::UnitZ();
-        std::cout<<"[px4ctrl] desired acc :"<<xy_acc << " exceed the max hor acc, limit to "<<flight_constraint_.max_acc_xy<<std::endl;
+      z_acc = kMinNormalizedCollectiveAcc_; // Not allow too small z-force when angle limit is enabled.
+    }
+    Eigen::Vector3d rot_axis = Eigen::Vector3d::UnitZ().cross(z_B).normalized();
+    double rot_ang = std::acos(Eigen::Vector3d::UnitZ().dot(z_B) / (1 * 1));
+    if (rot_ang > param.max_angle) // Exceed the angle limit
+    {
+      Eigen::Vector3d limited_z_B = Eigen::AngleAxisd(param.max_angle, rot_axis) * Eigen::Vector3d::UnitZ();
+      total_acc = z_acc / std::cos(param.max_angle) * limited_z_B;
     }
   }
 
+  // limit acc in x-y plane, set max x-y acc , z component unchanged
+  // if(flight_constraint_.max_acc_xy > 0 )
+  // {
+  //   double xy_acc = (total_acc - total_acc.dot(Eigen::Vector3d::UnitZ()) * Eigen::Vector3d::UnitZ()).norm();
+  //   if (xy_acc > flight_constraint_.max_acc_xy)
+  //   {
+  //       // extract x-y component
+  //       Eigen::Vector3d xy_acc_vec = total_acc - total_acc.dot(Eigen::Vector3d::UnitZ()) * Eigen::Vector3d::UnitZ();
+  //       xy_acc_vec = xy_acc_vec.normalized() * flight_constraint_.max_acc_xy;
+  //       total_acc = xy_acc_vec + total_acc.dot(Eigen::Vector3d::UnitZ()) * Eigen::Vector3d::UnitZ();
+  //       std::cout<<"[px4ctrl] desired acc :"<<xy_acc << " exceed the max hor acc, limit to "<<flight_constraint_.max_acc_xy<<std::endl;
+  //   }
+  // }
+
   // limit tilt
-    if(flight_constraint_.max_tilt > 0)
-    {
-        double z_acc = total_acc.dot(Eigen::Vector3d::UnitZ()); // z component of the total acceleration
-        Eigen::Vector3d z_B = total_acc.normalized();
-        if (z_acc < kMinNormalizedCollectiveAcc_)
-        {
-            z_acc = kMinNormalizedCollectiveAcc_; // Not allow too small z-force when angle limit is enabled.
-        }
-        Eigen::Vector3d rot_axis = Eigen::Vector3d::UnitZ().cross(z_B).normalized();
-        double rot_ang = std::acos(Eigen::Vector3d::UnitZ().dot(z_B) / (1 * 1));
-        if (rot_ang > flight_constraint_.max_tilt) // Exceed the angle limit
-        {
-            Eigen::Vector3d limited_z_B = Eigen::AngleAxisd(flight_constraint_.max_tilt, rot_axis) * Eigen::Vector3d::UnitZ();
-            total_acc = z_acc / std::cos(flight_constraint_.max_tilt) * limited_z_B;
-            std::cout<<"[px4ctrl] desired acc :"<<rot_ang << " exceed the max tilt, limit to "<<flight_constraint_.max_tilt<<std::endl;
-        }
-    }
+    // if(flight_constraint_.max_tilt > 0)
+    // {
+    //     double z_acc = total_acc.dot(Eigen::Vector3d::UnitZ()); // z component of the total acceleration
+    //     Eigen::Vector3d z_B = total_acc.normalized();
+    //     if (z_acc < kMinNormalizedCollectiveAcc_)
+    //     {
+    //         z_acc = kMinNormalizedCollectiveAcc_; // Not allow too small z-force when angle limit is enabled.
+    //     }
+    //     Eigen::Vector3d rot_axis = Eigen::Vector3d::UnitZ().cross(z_B).normalized();
+    //     double rot_ang = std::acos(Eigen::Vector3d::UnitZ().dot(z_B) / (1 * 1));
+    //     if (rot_ang > flight_constraint_.max_tilt) // Exceed the angle limit
+    //     {
+    //         Eigen::Vector3d limited_z_B = Eigen::AngleAxisd(flight_constraint_.max_tilt, rot_axis) * Eigen::Vector3d::UnitZ();
+    //         total_acc = z_acc / std::cos(flight_constraint_.max_tilt) * limited_z_B;
+    //         std::cout<<"[px4ctrl] desired acc :"<<rot_ang << " exceed the max tilt, limit to "<<flight_constraint_.max_tilt<<std::endl;
+    //     }
+    // }
 
 
   return total_acc;
