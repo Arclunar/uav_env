@@ -207,7 +207,11 @@ Odom_Data_t::Odom_Data_t()
 
 void Odom_Data_t::feed(nav_msgs::OdometryConstPtr pMsg)
 {
+    static ros::Time last_rev_time = ros::Time(0);
     ros::Time now = ros::Time::now();
+    ROS_INFO_THROTTLE(1.0,"debug:feed dt : %f", (now - last_rev_time).toSec());
+    // std::cout<<"feed dt : "<< (now - last_rev_time).toSec() << std::endl;
+    last_rev_time = now;
 
     msg = *pMsg;
     rcv_stamp = now;
@@ -240,6 +244,73 @@ void Odom_Data_t::feed(nav_msgs::OdometryConstPtr pMsg)
     }
     one_min_count ++;
 }
+
+void Odom_Data_t::feed_simple_odom(quadrotor_msgs::SimpleOdomConstPtr pMsg)
+{
+    static ros::Time last_rev_time = ros::Time(0);
+    ros::Time now = ros::Time::now();
+    ROS_INFO_THROTTLE(1.0,"feed simple dt : %f", (now - last_rev_time).toSec());
+    last_rev_time = now;
+
+    // msg = *pMsg;
+    msg.header = pMsg->header;
+    msg.pose.pose.position.x = pMsg->pose.position.x;
+    msg.pose.pose.position.y = pMsg->pose.position.y;
+    msg.pose.pose.position.z = pMsg->pose.position.z;
+    msg.pose.pose.orientation.x = pMsg->pose.orientation.x;
+    msg.pose.pose.orientation.y = pMsg->pose.orientation.y;
+    msg.pose.pose.orientation.z = pMsg->pose.orientation.z;
+    msg.pose.pose.orientation.w = pMsg->pose.orientation.w;
+    msg.twist.twist.linear.x = pMsg->twist.linear.x;
+    msg.twist.twist.linear.y = pMsg->twist.linear.y;
+    msg.twist.twist.linear.z = pMsg->twist.linear.z;
+    msg.twist.twist.angular.x = pMsg->twist.angular.x;
+    msg.twist.twist.angular.y = pMsg->twist.angular.y;
+    msg.twist.twist.angular.z = pMsg->twist.angular.z;
+    rcv_stamp = now;
+    recv_new_msg = true;
+
+    // uav_utils::extract_odometry(pMsg, p, v, q, w);
+    p(0) = pMsg->pose.position.x;
+    p(1) = pMsg->pose.position.y;
+    p(2) = pMsg->pose.position.z;
+    v(0) = pMsg->twist.linear.x;
+    v(1) = pMsg->twist.linear.y;
+    v(2) = pMsg->twist.linear.z;
+    w(0) = pMsg->twist.angular.x;
+    w(1) = pMsg->twist.angular.y;
+    w(2) = pMsg->twist.angular.z;
+    q.x() = pMsg->pose.orientation.x;
+    q.y() = pMsg->pose.orientation.y;
+    q.z() = pMsg->pose.orientation.z;
+    q.w() = pMsg->pose.orientation.w;
+
+// #define VEL_IN_BODY
+#ifdef VEL_IN_BODY /* Set to 1 if the velocity in odom topic is relative to current body frame, not to world frame.*/
+    Eigen::Quaternion<double> wRb_q(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
+    Eigen::Matrix3d wRb = wRb_q.matrix();
+    v = wRb * v;
+
+    static int count = 0;
+    if (count++ % 500 == 0)
+        ROS_WARN("VEL_IN_BODY!!!");
+#endif
+
+    // check the frequency
+    static int one_min_count = 9999;
+    static ros::Time last_clear_count_time = ros::Time(0.0);
+    if ( (now - last_clear_count_time).toSec() > 1.0 )
+    {
+        if ( one_min_count < 100 )
+        {
+            ROS_WARN("ODOM frequency seems lower than 100Hz, which is too low!");
+        }
+        one_min_count = 0;
+        last_clear_count_time = now;
+    }
+    one_min_count ++;
+}
+
 
 Imu_Data_t::Imu_Data_t()
 {

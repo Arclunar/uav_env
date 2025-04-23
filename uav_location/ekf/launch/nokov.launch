@@ -11,11 +11,13 @@
         <remap from="~imu" to="/mavros/imu/data_raw" />
         <!-- <remap from="~bodyodometry" to="/Odometry"/>  -->
         <remap from="~bodyodometry" to="/vrpn_client_node/$(arg markname)/pose" />
-        <remap from="~ekf_odom" to="/ekf/ekf_odom" />
+        <remap from="~ekf_odom" to="/ekf/ekf_odom_corrected" />
         <remap from="~yaw_rad" to="/yaw_radius" />
         
         <!-- parms -->
         <rosparam file="$(find ekf)/launch/PX4_vio_drone.yaml" command="load" />
+
+        <param name="frame_yaw_rot" type="double" value="0.0" />
 
         <!--body origin ( center of mass ) in IMU frame , for sending to controller-->
         <param name="imu_trans_x" type="double" value="0.0" />

@@ -61,6 +61,7 @@ class RosbagRecorder:
             '/ekf/ekf_odom',
             '/ekf/ekf_odom_filtered',
             '/ekf/acc_filtered',
+            '/ekf/simple_odom',
             '/ekf/test_freq',
             '/px4ctrlcoax/test_freq',
             '/debugPx4ctrl',
@@ -105,7 +106,7 @@ class RosbagRecorder:
         self.rosbag_filename = self.get_unique_filename()
 
         # Command to start recording
-        command = ['rosbag', 'record', '-O', self.rosbag_filename] + self.topics_to_record
+        command = ['rosbag', 'record', '--tcpnodelay','-O', self.rosbag_filename] + self.topics_to_record
         rospy.loginfo("{}Starting rosbag recording: {}{}".format(Colors.PINK, command, Colors.RESET))
         self.rosbag_process = subprocess.Popen(command)
 

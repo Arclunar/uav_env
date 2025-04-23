@@ -83,6 +83,7 @@ public:
 
   Odom_Data_t();
   void feed(nav_msgs::OdometryConstPtr pMsg);
+  void feed_simple_odom(quadrotor_msgs::SimpleOdomConstPtr pMsg);
 };
 
 class Imu_Data_t

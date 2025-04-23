@@ -58,13 +58,13 @@ gain:
     Kv1: 2.5
     Kv2: 1.5
     # by Steven Cheng
-    Kvi0: 0.05
-    Kvi1: 0.05
+    Kvi0: 0.00
+    Kvi1: 0.00
     Kvi2: 0.1 # avoid wrong thrust mapping causing increse height in landing mode :( 
     Kvd0: 0.0
     Kvd1: 0.0
     Kvd2: 0.0
-    Kvilim : 5.0
+    Kvilim : 1.0
     # ↓↓↓ Only used in rate control mode.
     KAngR: 20.0
     KAngP: 20.0

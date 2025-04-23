@@ -1,5 +1,6 @@
 <launch>
 	<arg name="odom" />
+	<arg name="simple_odom"/>
 	<arg name="position_cmd" />
 	<arg name="mandatory_stop" />
 	<arg name="cancel_mandatory_stop"/>
@@ -7,6 +8,7 @@
 	<node pkg="px4ctrl" type="px4ctrl_node" name="px4ctrlquad" output="screen">
         	<!-- <remap from="~odom" to="/odom_correction/odom" /> -->
         	<remap from="~odom" to="$(arg odom)" />
+			<remap from="~simple_odom" to="$(arg simple_odom)" />
 			<remap from="~cmd" to="$(arg position_cmd)" />
 			<remap from="~takeoff_land" to="/takeoffland_cmd"/>
 			<remap from="/mandatory_stop" to="$(arg mandatory_stop)" />

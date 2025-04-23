@@ -16,6 +16,6 @@
     </include>
 
     <!-- don't need odom bias and  odom correction -->
-    <node pkg="topic_tools" type="relay" name="odom_relay" args="/ekf/ekf_odom ekf/ekf_odom_corrected" />
+    <!-- <node pkg="topic_tools" type="relay" name="odom_relay" args="/ekf/ekf_odom ekf/ekf_odom_corrected" /> -->
 
 </launch>

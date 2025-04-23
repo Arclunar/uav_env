@@ -8,17 +8,17 @@ void mySigintHandler(int sig)
     ros::shutdown();
 }
 
-ros::Publisher test_freq_pub;
-void timerCallback(const ros::TimerEvent &event)
-{
-    nav_msgs::Odometry test_freq;
-    test_freq.header.stamp = ros::Time(0);
-    test_freq.header.frame_id = "world";
+// ros::Publisher test_freq_pub;
+// void timerCallback(const ros::TimerEvent &event)
+// {
+//     nav_msgs::Odometry test_freq;
+//     test_freq.header.stamp = ros::Time(0);
+//     test_freq.header.frame_id = "world";
 
-    static int count = 0;
-    test_freq.twist.twist.linear.x = (count++) % 20;
-    test_freq_pub.publish(test_freq);
-}
+//     static int count = 0;
+//     test_freq.twist.twist.linear.x = (count++) % 20;
+//     test_freq_pub.publish(test_freq);
+// }
 
 
 int main(int argc, char *argv[])
@@ -26,8 +26,8 @@ int main(int argc, char *argv[])
     ros::init(argc, argv, "px4ctrl");
     ros::NodeHandle nh("~");
 
-    ros::Timer timer = nh.createTimer(ros::Duration(0.005), timerCallback);
-    test_freq_pub = nh.advertise<nav_msgs::Odometry>("test_freq", 1);
+    // ros::Timer timer = nh.createTimer(ros::Duration(0.005), timerCallback);
+    // test_freq_pub = nh.advertise<nav_msgs::Odometry>("test_freq", 1);
 
 
     
@@ -54,10 +54,17 @@ int main(int argc, char *argv[])
 
     ros::Subscriber odom_sub =
         nh.subscribe<nav_msgs::Odometry>("odom",
-                                         100,
+                                         1000,
                                          boost::bind(&Odom_Data_t::feed, &fsm.odom_data, _1),
                                          ros::VoidConstPtr(),
                                          ros::TransportHints().tcpNoDelay());
+                                         
+    // ros::Subscriber simple_odom_sub =
+    // nh.subscribe<quadrotor_msgs::SimpleOdom>("simple_odom",
+    //                                     100,
+    //                                     boost::bind(&Odom_Data_t::feed_simple_odom, &fsm.odom_data, _1),
+    //                                     ros::VoidConstPtr(),
+    //                                     ros::TransportHints().tcpNoDelay());
 
     ros::Subscriber cmd_sub =
         nh.subscribe<quadrotor_msgs::PositionCommand>("cmd",

@@ -845,6 +845,10 @@ Eigen::Vector3d Controller::computeRealPIDErrorAcc(
     debug.des_v_y = (des.v(1) + Kp(1) * y_pos_error);
     debug.des_v_z = (des.v(2) + Kp(2) * z_pos_error);
 
+    debug.int_x = int_e_v.x();
+    debug.int_y = int_e_v.y();
+    debug.int_z = int_e_v.z();
+
     return acc_error;
 }
 

@@ -145,6 +145,8 @@ LowPassFilter2ndOrder lpf_vel_x_(30.0);
 LowPassFilter2ndOrder lpf_vel_y_(30.0);
 LowPassFilter2ndOrder lpf_vel_z_(30.0);
 
+// 坐标系yaw整体旋转
+double frame_rot_yaw = 0.0;
 
 // 向状态-imu序列添加当前状态及其对应的imu测量值到最后
 void seq_keep(const sensor_msgs::Imu::ConstPtr &imu_msg)
@@ -661,13 +663,13 @@ int main(int argc, char **argv)
 
     // ground truth
     ros::Subscriber s4 = n.subscribe("gt_", 40, gt_callback, ros::TransportHints().tcpNoDelay()); 
-    odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 100);   //freq = imu freq
+    odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 1000);   //freq = imu freq
     yaw_rad_pub = n.advertise<std_msgs::Float64>("yaw_rad", 4); //pub_yaw_radius value
     cam_odom_pub = n.advertise<nav_msgs::Odometry>("cam_ekf_odom", 100);
-    acc_filtered_pub = n.advertise<geometry_msgs::PoseStamped>("acc_filtered", 10);
-    odom_filtered_pub = n.advertise<nav_msgs::Odometry>("ekf_odom_filtered", 100); 
+    acc_filtered_pub = n.advertise<geometry_msgs::PoseStamped>("acc_filtered", 1000);
+    odom_filtered_pub = n.advertise<nav_msgs::Odometry>("ekf_odom_filtered", 1000); 
     test_freq_pub = n.advertise<nav_msgs::Odometry>("test_freq", 100);
-    simple_odom_pub = n.advertise<quadrotor_msgs::SimpleOdom>("simple_odom", 100);
+    simple_odom_pub = n.advertise<quadrotor_msgs::SimpleOdom>("simple_odom", 1000);
     
 
     ros::Timer timer = n.createTimer(ros::Duration(0.005), timerCallback);
@@ -680,6 +682,8 @@ int main(int argc, char **argv)
     n.getParam("imu_trans_x", imu_trans_x);
     n.getParam("imu_trans_y", imu_trans_y);
     n.getParam("imu_trans_z", imu_trans_z);
+    n.getParam("frame_rot_yaw", frame_rot_yaw);
+    n.getParam("add_swarm_pos_offset",add_swarm_pos_offset);
 
     cout << "Q:" << gyro_cov << " " << acc_cov << " R: " << position_cov << " " << q_rp_cov << " " << q_yaw_cov << endl;
     
@@ -803,7 +807,7 @@ void system_pub(ros::Time stamp)
     // double pub_dt = (now_time - last_pub_time).toSec();
     // last_pub_time = now_time;
     // std::cout << "pub_dt: " << pub_dt << std::endl;
-    odom_pub.publish(odom_fusion);
+    // odom_pub.publish(odom_fusion);
 
 
     // lpf
@@ -831,16 +835,48 @@ void system_pub(ros::Time stamp)
     odom_fusion.twist.twist.linear.y = body_vel_y_filtered;
     odom_fusion.twist.twist.linear.z = body_vel_z_filtered;
 
-    odom_filtered_pub.publish(odom_fusion);
+    odom_fusion.twist.twist.angular.x = imu_angular_velocity_(0);
+    odom_fusion.twist.twist.angular.y = imu_angular_velocity_(1);
+    odom_fusion.twist.twist.angular.z = imu_angular_velocity_(2);
 
-    quadrotor_msgs::SimpleOdom simple_odom;
-    simple_odom.header.stamp = stamp;
-    simple_odom.header.frame_id = "world";
-    simple_odom.pose = odom_fusion.pose.pose;
-    simple_odom.twist = odom_fusion.twist.twist;
-    simple_odom_pub.publish(simple_odom);
+    // odom_filtered_pub.publish(odom_fusion);
+    // odom_pub.publish(odom_fusion);
 
+    nav_msgs::Odometry odom_fusion_rot;
+    // 对odom_fusion进行绕着世界系z轴的旋转
+    // 角度转换为弧度
+    double frame_rot_yaw_rad = frame_rot_yaw * M_PI / 180.0;
+    Quaterniond q_rot = euler2quaternion(Vector3d(0, 0, frame_rot_yaw_rad));
+    Quaterniond q_rot_odom = q_rot * q;
+    odom_fusion_rot.pose.pose.orientation.w = q_rot_odom.w();
+    odom_fusion_rot.pose.pose.orientation.x = q_rot_odom.x();
+    odom_fusion_rot.pose.pose.orientation.y = q_rot_odom.y();
+    odom_fusion_rot.pose.pose.orientation.z = q_rot_odom.z();
 
+    odom_fusion_rot.pose.pose.position.x = body_pos(0) * cos(frame_rot_yaw_rad) - body_pos(1) * sin(frame_rot_yaw_rad);
+    odom_fusion_rot.pose.pose.position.y = body_pos(0) * sin(frame_rot_yaw_rad) + body_pos(1) * cos(frame_rot_yaw_rad);
+    odom_fusion_rot.pose.pose.position.z = body_pos(2);
+
+    odom_fusion_rot.twist.twist.linear.x = body_vel_x_filtered * cos(frame_rot_yaw_rad) - body_vel_y_filtered * sin(frame_rot_yaw_rad);
+    odom_fusion_rot.twist.twist.linear.y = body_vel_x_filtered * sin(frame_rot_yaw_rad) + body_vel_y_filtered * cos(frame_rot_yaw_rad);
+    odom_fusion_rot.twist.twist.linear.z = body_vel_z_filtered;
+
+    odom_fusion_rot.twist.twist.angular.x = imu_angular_velocity_(0);
+    odom_fusion_rot.twist.twist.angular.y = imu_angular_velocity_(1);
+    odom_fusion_rot.twist.twist.angular.z = imu_angular_velocity_(2);
+
+    // static ros::Time last_pub_time = ros::Time(0);
+    // ros::Time now_time = ros::Time::now();
+    // std::cout<<" dt = "<<(now_time - last_pub_time).toSec()<<std::endl;
+    // last_pub_time = now_time;
+    odom_pub.publish(odom_fusion_rot);
+
+    // quadrotor_msgs::SimpleOdom simple_odom;
+    // simple_odom.header.stamp = stamp;
+    // simple_odom.header.frame_id = "world";
+    // simple_odom.pose = odom_fusion_rot.pose.pose;
+    // simple_odom.twist = odom_fusion_rot.twist.twist;
+    // simple_odom_pub.publish(simple_odom);
 
     std_msgs::Float64 yaw_rad;
     double qua_w = 1.0, qua_x = 0.0, qua_y = 0.0, qua_z = 0.0;

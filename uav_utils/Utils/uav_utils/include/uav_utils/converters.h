@@ -12,7 +12,8 @@
 
 namespace uav_utils {
 
-inline void extract_odometry(nav_msgs::OdometryConstPtr msg, Eigen::Vector3d& p,
+template <typename T>
+inline void extract_odometry(T msg, Eigen::Vector3d& p,
                       Eigen::Vector3d& v, Eigen::Quaterniond& q)
 {
     p(0) = msg->pose.pose.position.x;
@@ -29,7 +30,8 @@ inline void extract_odometry(nav_msgs::OdometryConstPtr msg, Eigen::Vector3d& p,
     q.z() = msg->pose.pose.orientation.z;
 }
 
-inline void extract_odometry(nav_msgs::OdometryConstPtr msg, Eigen::Vector3d& p,
+template <typename T>
+inline void extract_odometry(T msg, Eigen::Vector3d& p,
                       Eigen::Vector3d& v, Eigen::Quaterniond& q, Eigen::Vector3d& w)
 {
     extract_odometry(msg, p, v, q);

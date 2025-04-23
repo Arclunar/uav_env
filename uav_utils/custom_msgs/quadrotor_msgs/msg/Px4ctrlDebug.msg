@@ -35,3 +35,7 @@ float64 fb_rate_x
 float64 fb_rate_y
 float64 fb_rate_z
 
+float64 int_x
+float64 int_y
+float64 int_z
+
