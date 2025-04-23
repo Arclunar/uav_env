@@ -683,7 +683,6 @@ int main(int argc, char **argv)
     n.getParam("imu_trans_y", imu_trans_y);
     n.getParam("imu_trans_z", imu_trans_z);
     n.getParam("frame_rot_yaw", frame_rot_yaw);
-    n.getParam("add_swarm_pos_offset",add_swarm_pos_offset);
 
     cout << "Q:" << gyro_cov << " " << acc_cov << " R: " << position_cov << " " << q_rp_cov << " " << q_yaw_cov << endl;
     
