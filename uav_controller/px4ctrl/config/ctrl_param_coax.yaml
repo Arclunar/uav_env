@@ -46,7 +46,7 @@ thrust_model: # The model that maps thrust signal u(0~1) to real thrust force F(
 
     # linear compensation for initial hover percentage 
     # hover_percentage = hp_in_standard_voltage + ( hp_in_low_voltage - hp_in_standard_voltage ) *  (battery_voltage - standard_voltage) / (low_voltage - standard_voltage)
-    hp_in_standard_voltage : 0.5 # should use hp and voltage in pair in flight
+    hp_in_standard_voltage : 0.53 # should use hp and voltage in pair in flight
     hp_in_low_voltage : 0.62  # nagative number means no voltage compensation
 
 gain: 
