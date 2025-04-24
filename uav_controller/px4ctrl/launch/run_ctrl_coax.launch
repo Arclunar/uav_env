@@ -10,6 +10,7 @@
         	<remap from="~odom" to="$(arg odom)" />
 			<remap from="~simple_odom" to="$(arg simple_odom)" />
 			<remap from="~cmd" to="$(arg position_cmd)" />
+			<remap from="~takeoff_land" to="/takeoffland_cmd"/>
 			<remap from="/mandatory_stop" to="$(arg mandatory_stop)" />
 			<remap from="/cancel_mandatory_stop" to="$(arg cancel_mandatory_stop)"/>
         	<rosparam command="load" file="$(find px4ctrl)/config/ctrl_param_coax.yaml" />
