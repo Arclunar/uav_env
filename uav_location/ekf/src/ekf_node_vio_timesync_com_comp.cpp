@@ -843,7 +843,7 @@ void system_pub(ros::Time stamp)
 
     nav_msgs::Odometry odom_fusion_rot;
     odom_fusion_rot.header.stamp = stamp;
-    odom_fusion_rot.frame_id = "world";
+    odom_fusion_rot.header.frame_id = "world";
     // 对odom_fusion进行绕着世界系z轴的旋转
     // 角度转换为弧度
     double frame_rot_yaw_rad = frame_rot_yaw * M_PI / 180.0;
