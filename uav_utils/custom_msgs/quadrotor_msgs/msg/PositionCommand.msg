@@ -5,6 +5,8 @@ geometry_msgs/Vector3 acceleration
 geometry_msgs/Vector3 jerk
 float64 yaw
 float64 yaw_dot
+float64[3] kx
+float64[3] kv 
 
 uint32 trajectory_id
 

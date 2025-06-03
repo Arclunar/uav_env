@@ -38,7 +38,7 @@ class RosbagRecorder:
             # drone_<drone_id>_ekf_object_odom_1
             '/drone_{0}_ekf_object_odom_1'.format(self.drone_id),
             # drone_<drone_id>_optimal_list
-            '/drone_{0}_optimal_list'.format(self.drone_id),
+            # '/drone_{0}_optimal_list'.format(self.drone_id),
             # drone_<drone_id>_global_list
             '/drone_{0}_global_list'.format(self.drone_id),
             '/drone_{0}_planning/trajectory'.format(self.drone_id),
@@ -48,30 +48,31 @@ class RosbagRecorder:
             '/mavros/px4flow/ground_distance',
             'drone_{0}_planning/pos_cmd'.format(self.drone_id),
             'drone_{0}_planning/pos_yaw_cmd'.format(self.drone_id),
-            'drone_{0}_track_manager/new_target_id'.format(self.drone_id),
-            '/drone_{0}_object_odom_to_planner'.format(self.drone_id),
-            '/vrpn_client_node/coax0{0}/pose'.format(self.drone_id),
-            '/vrpn_client_node/coax0{0}/twist'.format(self.drone_id),
-            '/others_odom',
-            '/micolink_tof',
+            # 'drone_{0}_track_manager/new_target_id'.format(self.drone_id),
+            # '/vrpn_client_node/coax0{0}/pose'.format(self.drone_id),
+            # '/vrpn_client_node/coax0{0}/twist'.format(self.drone_id),
+            # '/others_odom',
+            # '/micolink_tof',
             '/pose_height_fusion',
             '/mavros/imu/data',
             '/mavros/imu/data_raw',
             '/ekf/ekf_odom_corrected',
             '/ekf/ekf_odom',
-            '/ekf/ekf_odom_filtered',
-            '/ekf/acc_filtered',
-            '/ekf/simple_odom',
-            '/ekf/test_freq',
-            '/px4ctrlcoax/test_freq',
+            # '/ekf/ekf_odom_filtered',
+            # '/ekf/acc_filtered',
+            # '/ekf/simple_odom',
+            # '/ekf/test_freq',
+            # '/px4ctrlcoax/test_freq',
             '/debugPx4ctrl',
             '/mavros/setpoint_raw/local',
             '/mavros/setpoint_raw/attitude',
-            '/mavros/rc/in',
+            # '/mavros/rc/in',
             '/mavros/state',
-            '/mavros/battery',
+            # '/mavros/battery',
             '/px4ctrl/des_debug',
-            '/px4ctrl/fsm_debug'
+            '/px4ctrl/fsm_debug',
+            # '/vrpn_client_node/hit0{0}_coax/pose'.format(self.drone_id),
+            # '/vrpn_client_node/hit0{0}_coax/twist'.format(self.drone_id),
         ]
 
         # rospack = rospkg.RosPack()
@@ -83,7 +84,7 @@ class RosbagRecorder:
         # self.rosbag_directory = os.path.join(workspace_parent_dir, 'rosbag')
 
         # Directory to save the rosbags
-        self.rosbag_directory = os.path.expanduser('~/airdrop_swarm_ws/713workspace/rosbag')
+        self.rosbag_directory = os.path.expanduser('~/airdrop_swarm_ws/hires_swarm_ws/rosbag')
         if not os.path.exists(self.rosbag_directory):
             os.makedirs(self.rosbag_directory)
 
@@ -106,7 +107,8 @@ class RosbagRecorder:
         self.rosbag_filename = self.get_unique_filename()
 
         # Command to start recording
-        command = ['rosbag', 'record', '--tcpnodelay','-O', self.rosbag_filename] + self.topics_to_record
+        # command = ['rosbag', 'record', '--tcpnodelay','-O', self.rosbag_filename] + self.topics_to_record
+        command = ['rosbag', 'record','-O', self.rosbag_filename] + self.topics_to_record
         rospy.loginfo("{}Starting rosbag recording: {}{}".format(Colors.PINK, command, Colors.RESET))
         self.rosbag_process = subprocess.Popen(command)
 

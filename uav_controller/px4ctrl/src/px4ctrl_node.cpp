@@ -159,6 +159,7 @@ int main(int argc, char *argv[])
             ROS_ERROR("Unable to connnect to PX4!!!");
     }
 
+    //! This is weird , handle callback at max ctrl_freq_max frequency
     ros::Rate r(param.ctrl_freq_max);
     while (ros::ok())
     {

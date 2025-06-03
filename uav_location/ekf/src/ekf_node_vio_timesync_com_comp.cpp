@@ -64,7 +64,7 @@ ros::Publisher cam_odom_pub;
 ros::Publisher acc_filtered_pub;
 ros::Publisher yaw_rad_pub;
 ros::Publisher odom_filtered_pub;
-ros::Publisher test_freq_pub;
+// ros::Publisher test_freq_pub;
 ros::Publisher simple_odom_pub;
 
 //state
@@ -644,13 +644,13 @@ void imu_att_callback(const sensor_msgs::Imu::ConstPtr &msg)
     imu_angular_velocity_(2) = msg->angular_velocity.z;
 }
 
-void timerCallback(const ros::TimerEvent &event)
-{
-    nav_msgs::Odometry test_freq;
-    test_freq.header.stamp = ros::Time(0);
-    test_freq.header.frame_id = "world";
-    test_freq_pub.publish(test_freq);
-}
+// void timerCallback(const ros::TimerEvent &event)
+// {
+//     nav_msgs::Odometry test_freq;
+//     test_freq.header.stamp = ros::Time(0);
+//     test_freq.header.frame_id = "world";
+//     test_freq_pub.publish(test_freq);
+// }
 
 int main(int argc, char **argv)
 {
@@ -668,11 +668,11 @@ int main(int argc, char **argv)
     cam_odom_pub = n.advertise<nav_msgs::Odometry>("cam_ekf_odom", 100);
     acc_filtered_pub = n.advertise<geometry_msgs::PoseStamped>("acc_filtered", 1000);
     odom_filtered_pub = n.advertise<nav_msgs::Odometry>("ekf_odom_filtered", 1000); 
-    test_freq_pub = n.advertise<nav_msgs::Odometry>("test_freq", 100);
+    // test_freq_pub = n.advertise<nav_msgs::Odometry>("test_freq", 100);
     simple_odom_pub = n.advertise<quadrotor_msgs::SimpleOdom>("simple_odom", 1000);
     
 
-    ros::Timer timer = n.createTimer(ros::Duration(0.005), timerCallback);
+    // ros::Timer timer = n.createTimer(ros::Duration(0.005), timerCallback);
     
     n.getParam("gyro_cov", gyro_cov);
     n.getParam("acc_cov", acc_cov);
@@ -706,16 +706,19 @@ int main(int argc, char **argv)
 
     last_vio_update_time_ = ros::Time(0);
 
+    ros::spin();
+
+
     // 2. 创建 AsyncSpinner（8个线程）
-    ros::AsyncSpinner spinner(8);  // 使用 8 个线程处理回调
-    spinner.start();  // 启动异步 spinner
+    // ros::AsyncSpinner spinner(8);  // 使用 8 个线程处理回调
+    // spinner.start();  // 启动异步 spinner
     
     // 保持节点运行
-    ros::Rate rate(1000);  // 设置循环频率为 1000Hz
-    while (ros::ok())
-    {
-        rate.sleep();  // 等待下一个循环
-    }
+    // ros::Rate rate(1000);  // 设置循环频率为 1000Hz
+    // while (ros::ok())
+    // {
+    //     rate.sleep();  // 等待下一个循环
+    // }
 
     return 0;
 }
@@ -813,17 +816,17 @@ void system_pub(ros::Time stamp)
     static ros::Time last_stamp = ros::Time(0);
     double dt = last_stamp.isZero() ? 0.01 : (stamp - last_stamp).toSec();
 
-    // limit dt to 100 to 300 hz , warn when exceed
-    if(dt > 0.01)
-    {
-        ROS_WARN_THROTTLE(1.0,"dt is too large: %f", dt);
-        dt = 0.01;
-    }
-    if(dt < 0.003)
-    {
-        ROS_WARN_THROTTLE(1.0,"dt is too small: %f", dt);
-        dt = 0.003;
-    }
+    // // limit dt to 100 to 300 hz , warn when exceed
+    // if(dt > 0.01)
+    // {
+    //     ROS_WARN_THROTTLE(1.0,"dt is too large: %f", dt);
+    //     // dt = 0.01;
+    // }
+    // if(dt < 0.003)
+    // {
+    //     ROS_WARN_THROTTLE(1.0,"dt is too small: %f", dt);
+    //     // dt = 0.003;
+    // }
 
     last_stamp = stamp;
     double body_vel_x_filtered = lpf_vel_x_.update(body_vel_in_world.x(),dt);
