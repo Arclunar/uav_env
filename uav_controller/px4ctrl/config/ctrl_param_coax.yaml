@@ -46,8 +46,8 @@ thrust_model: # The model that maps thrust signal u(0~1) to real thrust force F(
 
     # linear compensation for initial hover percentage 
     # hover_percentage = hp_in_standard_voltage + ( hp_in_low_voltage - hp_in_standard_voltage ) *  (battery_voltage - standard_voltage) / (low_voltage - standard_voltage)
-    hp_in_standard_voltage : 0.43 # should use hp and voltage in pair in flight
-    hp_in_low_voltage : 0.48  # nagative number means no voltage compensation
+    hp_in_standard_voltage : 0.39 # should use hp and voltage in pair in flight
+    hp_in_low_voltage : 0.43  # nagative number means no voltage compensation
 
 gain: 
     # Cascade PID controller. Recommend to read the code.
